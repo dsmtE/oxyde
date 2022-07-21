@@ -1,9 +1,7 @@
 use super::binding_builder::{ BindGroupLayoutBuilder, BindGroupBuilder, BindGroupLayoutWithDesc};
 
 pub struct PingPongTexture {
-    label: Option<&'static str>,
-    // texture_ping: wgpu::Texture,
-    // texture_pong: wgpu::Texture,
+    label: &'static str,
     view_ping: wgpu::TextureView,
     view_pong: wgpu::TextureView,
     pub bind_group_layout: BindGroupLayoutWithDesc,
@@ -11,17 +9,17 @@ pub struct PingPongTexture {
 }
 
 impl PingPongTexture {
-    // TODO: pass SamplerDescriptor in parameter
     pub fn from_descriptor(
         device: &wgpu::Device,
         descriptor: &wgpu::TextureDescriptor,
-        label: Option<&'static str>, // Optional debug label. This will show up in graphics debuggers for easy identification.
+        optional_label: Option<&'static str>, // Optional debug label. This will show up in graphics debuggers for easy identification.
     ) -> Result<Self, wgpu::Error> {
         let texture_ping = device.create_texture(&descriptor);
         let texture_pong = device.create_texture(&descriptor);
         let view_ping = texture_ping.create_view(&wgpu::TextureViewDescriptor::default());
         let view_pong = texture_pong.create_view(&wgpu::TextureViewDescriptor::default());
 
+        let label = optional_label.unwrap_or("");
         let bind_group_layout = BindGroupLayoutBuilder::new()
             .add_binding_fragment(
                 wgpu::BindingType::Texture {
@@ -32,7 +30,7 @@ impl PingPongTexture {
             ).add_binding_fragment(
                 wgpu::BindingType::Sampler { 0: wgpu::SamplerBindingType::Filtering }
             )
-            .create(device, format!("BindGroupLayout: {}", label.unwrap_or("")).as_str());
+            .create(device, format!("BindGroupLayout: {}", label).as_str());
 
         Ok(Self {
             label,
@@ -48,12 +46,12 @@ impl PingPongTexture {
         let bind_group_ping = BindGroupBuilder::new(&self.bind_group_layout)
             .texture(&self.view_ping)
             .sampler(sampler)
-            .create(device, format!("BindGroup(ping): {}", self.label.unwrap_or("")).as_str());
+            .create(device, format!("BindGroup(ping): {}", self.label).as_str());
 
         let bind_group_pong = BindGroupBuilder::new(&self.bind_group_layout)
-        .texture(&self.view_pong)
-        .sampler(sampler)
-        .create(device, format!("BindGroup(pong): {}", self.label.unwrap_or("")).as_str());
+            .texture(&self.view_pong)
+            .sampler(sampler)
+            .create(device, format!("BindGroup(pong): {}", self.label).as_str());
 
         (bind_group_ping, bind_group_pong)
     }
