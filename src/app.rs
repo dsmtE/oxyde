@@ -66,15 +66,15 @@ pub trait App {
 
 pub struct AppConfig {
     pub is_resizable: bool,
-    pub title: String,
-    pub icon: Option<String>,
+    pub title: &'static str,
+    pub icon: Option<&'static str>,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             is_resizable: false,
-            title: "Application".to_string(),
+            title: "Application",
             icon: None,
         }
     }
@@ -87,9 +87,9 @@ pub fn run_application<T: App + 'static>(config: AppConfig) -> Result<()> {
         .with_decorations(true)
         .with_resizable(config.is_resizable)
         .with_transparent(false)
-        .with_title(config.title.to_string());
+        .with_title(config.title);
 
-    if let Some(icon_path) = config.icon.as_ref() {
+    if let Some(icon_path) = config.icon {
         let image = image::io::Reader::open(icon_path)?.decode()?.into_rgba8();
         let (width, height) = image.dimensions();
         let icon = Icon::from_rgba(image.into_raw(), width, height)?;
@@ -104,7 +104,7 @@ pub fn run_application<T: App + 'static>(config: AppConfig) -> Result<()> {
     let window = window_builder.build(&event_loop)?;
 
     let window_dimensions = window.inner_size();
-    
+
     // TODO : encapsulate renderer initialisation
     let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
     let surface = unsafe { instance.create_surface(&window) };
