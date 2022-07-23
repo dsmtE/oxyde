@@ -1,4 +1,4 @@
-use super::binding_builder::{ BindGroupLayoutBuilder, BindGroupBuilder, BindGroupLayoutWithDesc};
+use super::binding_builder::{BindGroupBuilder, BindGroupLayoutBuilder, BindGroupLayoutWithDesc};
 
 pub struct PingPongTexture {
     label: &'static str,
@@ -21,15 +21,12 @@ impl PingPongTexture {
 
         let label = optional_label.unwrap_or("");
         let bind_group_layout = BindGroupLayoutBuilder::new()
-            .add_binding_fragment(
-                wgpu::BindingType::Texture {
-                    multisampled: false,
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                }
-            ).add_binding_fragment(
-                wgpu::BindingType::Sampler { 0: wgpu::SamplerBindingType::Filtering }
-            )
+            .add_binding_fragment(wgpu::BindingType::Texture {
+                multisampled: false,
+                view_dimension: wgpu::TextureViewDimension::D2,
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+            })
+            .add_binding_fragment(wgpu::BindingType::Sampler { 0: wgpu::SamplerBindingType::Filtering })
             .create(device, format!("BindGroupLayout: {}", label).as_str());
 
         Ok(Self {
@@ -42,7 +39,6 @@ impl PingPongTexture {
     }
 
     pub fn create_binding_group(&self, device: &wgpu::Device, sampler: &wgpu::Sampler) -> (wgpu::BindGroup, wgpu::BindGroup) {
-
         let bind_group_ping = BindGroupBuilder::new(&self.bind_group_layout)
             .texture(&self.view_ping)
             .sampler(sampler)

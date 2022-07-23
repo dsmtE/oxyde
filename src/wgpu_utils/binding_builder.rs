@@ -24,30 +24,17 @@ impl BindGroupLayoutBuilder {
 
     pub fn add_binding(self, visibility: wgpu::ShaderStages, ty: wgpu::BindingType) -> Self {
         let binding: u32 = self.next_binding_index;
-        self.add_raw_binding(wgpu::BindGroupLayoutEntry {
-            binding,
-            visibility,
-            ty,
-            count: None,
-        })
+        self.add_raw_binding(wgpu::BindGroupLayoutEntry { binding, visibility, ty, count: None })
     }
 
     // convenient helpers
-    pub fn add_binding_compute(self, ty: wgpu::BindingType) -> Self {
-        self.add_binding(wgpu::ShaderStages::COMPUTE, ty)
-    }
+    pub fn add_binding_compute(self, ty: wgpu::BindingType) -> Self { self.add_binding(wgpu::ShaderStages::COMPUTE, ty) }
 
-    pub fn add_binding_fragment(self, ty: wgpu::BindingType) -> Self {
-        self.add_binding(wgpu::ShaderStages::FRAGMENT, ty)
-    }
+    pub fn add_binding_fragment(self, ty: wgpu::BindingType) -> Self { self.add_binding(wgpu::ShaderStages::FRAGMENT, ty) }
 
-    pub fn add_binding_vertex(self, ty: wgpu::BindingType) -> Self {
-        self.add_binding(wgpu::ShaderStages::VERTEX, ty)
-    }
+    pub fn add_binding_vertex(self, ty: wgpu::BindingType) -> Self { self.add_binding(wgpu::ShaderStages::VERTEX, ty) }
 
-    pub fn add_binding_rendering(self, ty: wgpu::BindingType) -> Self {
-       self.add_binding(wgpu::ShaderStages::VERTEX_FRAGMENT, ty)
-    }
+    pub fn add_binding_rendering(self, ty: wgpu::BindingType) -> Self { self.add_binding(wgpu::ShaderStages::VERTEX_FRAGMENT, ty) }
 
     pub fn create(self, device: &wgpu::Device, label: &str) -> BindGroupLayoutWithDesc {
         BindGroupLayoutWithDesc {
@@ -66,12 +53,7 @@ pub struct BindGroupBuilder<'a> {
 }
 
 impl<'a> BindGroupBuilder<'a> {
-    pub fn new(layout_with_desc: &'a BindGroupLayoutWithDesc) -> Self {
-        BindGroupBuilder {
-            layout_with_desc,
-            entries: Vec::new(),
-        }
-    }
+    pub fn new(layout_with_desc: &'a BindGroupLayoutWithDesc) -> Self { BindGroupBuilder { layout_with_desc, entries: Vec::new() } }
 
     // Uses same binding index as binding group layout at the same ordering
     pub fn resource(mut self, resource: wgpu::BindingResource<'a>) -> Self {
@@ -84,12 +66,8 @@ impl<'a> BindGroupBuilder<'a> {
     }
 
     // convenient helpers
-    pub fn sampler(self, sampler: &'a wgpu::Sampler) -> Self {
-        self.resource(wgpu::BindingResource::Sampler(sampler))
-    }
-    pub fn texture(self, texture_view: &'a wgpu::TextureView) -> Self {
-        self.resource(wgpu::BindingResource::TextureView(texture_view))
-    }
+    pub fn sampler(self, sampler: &'a wgpu::Sampler) -> Self { self.resource(wgpu::BindingResource::Sampler(sampler)) }
+    pub fn texture(self, texture_view: &'a wgpu::TextureView) -> Self { self.resource(wgpu::BindingResource::TextureView(texture_view)) }
 
     pub fn create(&self, device: &wgpu::Device, label: &str) -> wgpu::BindGroup {
         assert_eq!(self.entries.len(), self.layout_with_desc.entries.len());
