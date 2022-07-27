@@ -14,12 +14,15 @@ impl epi::backend::RepaintSignal for RepaintSignal {
     fn request_repaint(&self) {}
 }
 
+
 pub struct Gui {
     platform: Platform,
     repaint_signal: Arc<RepaintSignal>,
     start_time: Instant,
     last_frame_start: Instant,
     previous_frame_time: Option<f32>,
+    pub available_rect: egui::Rect,
+
 }
 
 impl Gui {
@@ -39,6 +42,7 @@ impl Gui {
             start_time: Instant::now(),
             previous_frame_time: None,
             last_frame_start: Instant::now(),
+            available_rect: egui::Rect::EVERYTHING,
         }
     }
 
@@ -68,6 +72,7 @@ impl Gui {
     }
 
     pub fn end_frame(&mut self, window: &Window) -> egui::FullOutput {
+        self.available_rect = self.context().available_rect();
         let frame_time = self.last_frame_start.elapsed().as_secs_f32();
         self.previous_frame_time = Some(frame_time);
 
