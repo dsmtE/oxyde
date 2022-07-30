@@ -36,11 +36,11 @@ impl BindGroupLayoutBuilder {
 
     pub fn add_binding_rendering(self, ty: wgpu::BindingType) -> Self { self.add_binding(wgpu::ShaderStages::VERTEX_FRAGMENT, ty) }
 
-    pub fn create(self, device: &wgpu::Device, label: &str) -> BindGroupLayoutWithDesc {
+    pub fn create(self, device: &wgpu::Device, label: Option<&str>) -> BindGroupLayoutWithDesc {
         BindGroupLayoutWithDesc {
             layout: device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &self.entries,
-                label: Some(label),
+                label: Some(format!("BindGroupLayout: {}", label.unwrap_or("unknown")).as_str()),
             }),
             entries: self.entries,
         }
@@ -69,12 +69,12 @@ impl<'a> BindGroupBuilder<'a> {
     pub fn sampler(self, sampler: &'a wgpu::Sampler) -> Self { self.resource(wgpu::BindingResource::Sampler(sampler)) }
     pub fn texture(self, texture_view: &'a wgpu::TextureView) -> Self { self.resource(wgpu::BindingResource::TextureView(texture_view)) }
 
-    pub fn create(&self, device: &wgpu::Device, label: &str) -> wgpu::BindGroup {
+    pub fn create(&self, device: &wgpu::Device, label: Option<&str>) -> wgpu::BindGroup {
         assert_eq!(self.entries.len(), self.layout_with_desc.entries.len());
         device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &self.layout_with_desc.layout,
             entries: &self.entries,
-            label: Some(label),
+            label: Some(format!("BindGroup: {}", label.unwrap_or("unknown")).as_str()),
         })
     }
 }
