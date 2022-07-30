@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 // common binding types mapped to glsl type names
 
 pub fn buffer(read_only: bool) -> wgpu::BindingType {
