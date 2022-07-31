@@ -80,16 +80,38 @@ impl Default for AppConfig {
     }
 }
 
-pub fn run_application<T: App + 'static>(config: AppConfig) -> Result<()> {
+pub struct RenderingConfig {
+    power_preference: wgpu::PowerPreference,
+    device_features: wgpu::Features,
+    device_limits: wgpu::Limits,
+    backend: wgpu::Backends,
+    window_surface_present_mode: wgpu::PresentMode,
+}
+
+impl Default for RenderingConfig {
+    fn default() -> Self {
+        Self {
+            power_preference: wgpu::PowerPreference::default(),
+            device_features: wgpu::Features::default(),
+            device_limits: wgpu::Limits::default(),
+            backend: wgpu::Backends::PRIMARY,
+            // FIFO, will cap the display rate at the displays framerate. This is essentially VSync.
+            // https://docs.rs/wgpu/0.10.1/wgpu/enum.PresentMode.html
+            window_surface_present_mode: wgpu::PresentMode::Fifo,
+        }
+    }
+}
+
+pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config: RenderingConfig) -> Result<()> {
     let event_loop = EventLoop::new();
 
     let mut window_builder = WindowBuilder::new()
         .with_decorations(true)
-        .with_resizable(config.is_resizable)
+        .with_resizable(app_config.is_resizable)
         .with_transparent(false)
-        .with_title(config.title);
+        .with_title(app_config.title);
 
-    if let Some(icon_path) = config.icon {
+    if let Some(icon_path) = app_config.icon {
         let image = image::io::Reader::open(icon_path)?.decode()?.into_rgba8();
         let (width, height) = image.dimensions();
         let icon = Icon::from_rgba(image.into_raw(), width, height)?;
@@ -106,11 +128,11 @@ pub fn run_application<T: App + 'static>(config: AppConfig) -> Result<()> {
     let window_dimensions = window.inner_size();
 
     // TODO : encapsulate renderer initialisation
-    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+    let instance = wgpu::Instance::new(rendering_config.backend);
     let surface = unsafe { instance.create_surface(&window) };
 
     let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::default(),
+        power_preference: rendering_config.power_preference,
         compatible_surface: Some(&surface),
         force_fallback_adapter: false,
     }))
@@ -119,8 +141,8 @@ pub fn run_application<T: App + 'static>(config: AppConfig) -> Result<()> {
     let (device, queue) = pollster::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
             label: None,
-            features: wgpu::Features::default(),
-            limits: wgpu::Limits::default(),
+            features: rendering_config.device_features,
+            limits: rendering_config.device_limits,
         },
         None,
     ))?;
@@ -132,9 +154,7 @@ pub fn run_application<T: App + 'static>(config: AppConfig) -> Result<()> {
         format: surface_format,
         width: window_dimensions.width,
         height: window_dimensions.height,
-        // FIFO, will cap the display rate at the displays framerate. This is essentially VSync.
-        // https://docs.rs/wgpu/0.10.1/wgpu/enum.PresentMode.html
-        present_mode: wgpu::PresentMode::Mailbox,
+        present_mode: rendering_config.window_surface_present_mode,
     };
     surface.configure(&device, &config);
 
