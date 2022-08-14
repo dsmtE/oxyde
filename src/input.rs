@@ -2,15 +2,20 @@ use nalgebra_glm as glm;
 use std::time::Instant;
 use winit::{
     dpi::PhysicalSize,
-    event::{ElementState, Event, KeyboardInput, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent},
+    event::{ElementState, Event, KeyboardInput, MouseButton, MouseScrollDelta, WindowEvent},
 };
 
-pub type KeyMap = std::collections::HashMap<VirtualKeyCode, ElementState>;
-
-#[derive(Default)]
 pub struct InputsState {
-    pub keystates: KeyMap,
+    pub keystates: [bool; 1024],
     pub mouse: MouseState,
+}
+impl Default for InputsState {
+    fn default() -> Self {
+        Self {
+            keystates: [false; 1024],
+            mouse: MouseState::default(),
+        }
+    }
 }
 
 pub trait WinitEventHandler {
@@ -18,22 +23,19 @@ pub trait WinitEventHandler {
 }
 
 impl InputsState {
-    pub fn is_key_pressed(&self, keycode: &VirtualKeyCode) -> bool {
-        self.keystates.contains_key(keycode) && self.keystates[keycode] == ElementState::Pressed
-    }
+    pub fn is_key_pressed(&self, scancode: u32) -> bool { self.keystates[scancode as usize] }
 }
 
 impl WinitEventHandler for InputsState {
     fn handle_event<T>(&mut self, event: &Event<T>) {
-        if let Event::WindowEvent { event, .. } = event {
+        if let Event::WindowEvent { event: window_event, ..} = event {
             if let WindowEvent::KeyboardInput {
-                input: KeyboardInput {
-                    virtual_keycode: Some(keycode), state, ..
-                },
+                input: KeyboardInput {scancode , state, virtual_keycode, .. },
                 ..
-            } = *event
+            } = *window_event
             {
-                *self.keystates.entry(keycode).or_insert(state) = state;
+                self.keystates[scancode as usize] = state == ElementState::Pressed;
+                trace!("{:?} pressed corresponding to the scancode {} (state: {:?})", virtual_keycode, scancode, state);
             }
         }
 
@@ -57,14 +59,10 @@ impl WinitEventHandler for MouseState {
     fn handle_event<T>(&mut self, event: &Event<T>) {
         match event {
             Event::NewEvents { .. } => {
-                if !self.scrolled {
-                    self.wheel_delta = glm::vec2(0.0, 0.0);
-                }
+                if !self.scrolled { self.wheel_delta = glm::vec2(0.0, 0.0); }
                 self.scrolled = false;
 
-                if !self.moved {
-                    self.position_delta = glm::vec2(0.0, 0.0);
-                }
+                if !self.moved { self.position_delta = glm::vec2(0.0, 0.0); }
                 self.moved = false;
             },
             Event::WindowEvent { event, .. } => match *event {
