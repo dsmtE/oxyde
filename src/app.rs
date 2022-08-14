@@ -81,11 +81,11 @@ impl Default for AppConfig {
 }
 
 pub struct RenderingConfig {
-    power_preference: wgpu::PowerPreference,
-    device_features: wgpu::Features,
-    device_limits: wgpu::Limits,
-    backend: wgpu::Backends,
-    window_surface_present_mode: wgpu::PresentMode,
+    pub power_preference: wgpu::PowerPreference,
+    pub device_features: wgpu::Features,
+    pub device_limits: wgpu::Limits,
+    pub backend: wgpu::Backends,
+    pub window_surface_present_mode: wgpu::PresentMode,
 }
 
 impl Default for RenderingConfig {
