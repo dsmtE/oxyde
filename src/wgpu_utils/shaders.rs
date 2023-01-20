@@ -43,7 +43,6 @@ pub fn load_glsl_shader_module_from_path(device: &wgpu::Device, path: &Path, ent
         options.set_warnings_as_errors();
         options.set_target_env(shaderc::TargetEnv::Vulkan, 0);
         options.set_optimization_level(shaderc::OptimizationLevel::Performance);
-        options.set_generate_debug_info();
 
         options.add_macro_definition("FRAGMENT_SHADER", Some(if kind == ShaderKind::Fragment { "1" } else { "0" }));
         options.add_macro_definition("VERTEX_SHADER", Some(if kind == ShaderKind::Vertex { "1" } else { "0" }));
@@ -111,7 +110,6 @@ pub fn load_glsl_shader_module_from_string(
         options.set_warnings_as_errors();
         options.set_target_env(shaderc::TargetEnv::Vulkan, 0);
         options.set_optimization_level(shaderc::OptimizationLevel::Performance);
-        options.set_generate_debug_info();
 
         options.add_macro_definition("FRAGMENT_SHADER", Some(if kind == ShaderKind::Fragment { "1" } else { "0" }));
         options.add_macro_definition("VERTEX_SHADER", Some(if kind == ShaderKind::Vertex { "1" } else { "0" }));
