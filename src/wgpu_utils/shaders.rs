@@ -82,11 +82,15 @@ pub fn load_glsl_shader_module_from_path(device: &wgpu::Device, path: &Path, ent
         warn!("warnings when compiling {:?}:\n{}", path, compilation_artifact.get_warning_messages());
     }
 
+    let label = Some(path.file_name().unwrap().to_str().unwrap());
+
+    let module =  device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+        label,
+        source: wgpu::util::make_spirv(compilation_artifact.as_binary_u8()),
+    });
+
     Ok(ShaderModuleWithSourceFiles {
-        module: device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some(path.file_name().unwrap().to_str().unwrap()),
-            source: wgpu::ShaderSource::SpirV(Borrowed(&compilation_artifact.as_binary())),
-        }),
+        module,
         source_files: source_files.into_inner(),
     })
 }
@@ -165,11 +169,13 @@ pub fn load_glsl_shader_module_from_string(
         warn!("warnings when compiling:\n{}", compilation_artifact.get_warning_messages());
     }
 
+    let module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+        label,
+        source: wgpu::util::make_spirv(compilation_artifact.as_binary_u8()),
+    });
+
     Ok(ShaderModuleWithSourceFiles {
-        module: device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label,
-            source: wgpu::ShaderSource::SpirV(Borrowed(&compilation_artifact.as_binary())),
-        }),
+        module,
         source_files: source_files.into_inner(),
     })
 }
