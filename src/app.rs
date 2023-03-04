@@ -45,7 +45,7 @@ pub trait App {
 
     fn update(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
-    fn render_gui(&mut self, _ctx: &epi::egui::Context) -> Result<()> { Ok(()) }
+    fn render_gui(&mut self, _ctx: &egui::Context) -> Result<()> { Ok(()) }
 
     fn render(
         &mut self,
@@ -128,8 +128,13 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     let window_dimensions = window.inner_size();
 
     // TODO : encapsulate renderer initialisation
-    let instance = wgpu::Instance::new(rendering_config.backend);
-    let surface = unsafe { instance.create_surface(&window) };
+    let instance = wgpu::Instance::new(
+        wgpu::InstanceDescriptor {
+            backends: rendering_config.backend,
+            dx12_shader_compiler: wgpu::Dx12Compiler::default()
+        }
+    );
+    let surface = unsafe { instance.create_surface(&window) }.unwrap();
 
     let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: rendering_config.power_preference,
@@ -147,14 +152,16 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         None,
     ))?;
     // .ok_or(Err(anyhow::anyhow!("Unable to request device")));
-
-    let surface_format = surface.get_preferred_format(&adapter).unwrap();
+    let binding = surface.get_capabilities(&adapter);
+    let surface_format = binding.formats.first().unwrap();
     let config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        format: surface_format,
+        format: *surface_format,
         width: window_dimensions.width,
         height: window_dimensions.height,
         present_mode: rendering_config.window_surface_present_mode,
+        alpha_mode : wgpu::CompositeAlphaMode::default(),
+        view_formats: vec![],
     };
     surface.configure(&device, &config);
 

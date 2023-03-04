@@ -1,28 +1,26 @@
 [package]
 name = "oxyde"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["DE SMET Enguerrand"]
 edition = "2021"
 
 [dependencies]
-
 image = "0.24"
-winit = "0.26"
+winit = "0.28"
 
 log = "0.4"
 
-wgpu = { version = "0.12", features = [ "spirv" ] }
-pollster = "0.2"
-bytemuck = { version = "1.7", features = [ "derive" ] }
+wgpu = { version = "0.15", features = [ "spirv" ] }
+pollster = "0.3"
+bytemuck = { version = "1.13", features = [ "derive" ] }
 anyhow = "1"
 
-egui = "0.17"
-epi = "0.17"
-egui_wgpu_backend = "0.17"
-egui_winit_platform = "0.14"
+egui = "0.21"
+egui_wgpu_backend = "0.22"
+egui_winit_platform = "0.18"
 
 spin_sleep = "1"
 
 shaderc = "0.8"
 
-nalgebra-glm = { version = "0.17", features = ["serde-serialize"] }
+nalgebra-glm = { version = "0.18", features = ["serde-serialize"] }

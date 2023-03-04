@@ -2,22 +2,21 @@ use anyhow::{Context, Result};
 use egui_wgpu_backend::RenderPass;
 
 use egui_winit_platform::{Platform, PlatformDescriptor};
-use std::{sync::Arc, time::Instant};
+use std::{time::Instant};
 use wgpu::CommandEncoder;
 use winit::{event::Event, window::Window};
 
 pub use egui_wgpu_backend::ScreenDescriptor;
 
 // We repaint the UI every frame, so no custom repaint signal is needed
-struct RepaintSignal;
-impl epi::backend::RepaintSignal for RepaintSignal {
-    fn request_repaint(&self) {}
-}
+// struct RepaintSignal;
+// impl egui::backend::RepaintSignal for RepaintSignal {
+//     fn request_repaint(&self) {}
+// }
 
 
 pub struct Gui {
     platform: Platform,
-    repaint_signal: Arc<RepaintSignal>,
     start_time: Instant,
     last_frame_start: Instant,
     previous_frame_time: Option<f32>,
@@ -32,13 +31,12 @@ impl Gui {
             physical_width: screen_descriptor.physical_width,
             physical_height: screen_descriptor.physical_height,
             scale_factor: screen_descriptor.scale_factor as f64,
-            font_definitions: epi::egui::FontDefinitions::default(),
+            font_definitions: egui::FontDefinitions::default(),
             style: Default::default(),
         });
 
         Self {
             platform,
-            repaint_signal: std::sync::Arc::new(RepaintSignal {}),
             start_time: Instant::now(),
             previous_frame_time: None,
             last_frame_start: Instant::now(),
@@ -48,27 +46,14 @@ impl Gui {
 
     pub fn handle_event(&mut self, event: &Event<()>) { self.platform.handle_event(&event); }
 
-    pub fn context(&self) -> epi::egui::Context { self.platform.context() }
+    pub fn context(&self) -> egui::Context { self.platform.context() }
 
-    pub fn start_frame<'a>(&mut self, scale_factor: f32) -> epi::backend::FrameData {
+    pub fn start_frame<'a>(&mut self, _scale_factor: f32) {
         self.platform.update_time(self.start_time.elapsed().as_secs_f64());
 
         // Begin to draw the UI frame.
         self.last_frame_start = Instant::now();
         self.platform.begin_frame();
-        let app_output = epi::backend::AppOutput::default();
-
-        epi::backend::FrameData {
-            info: epi::IntegrationInfo {
-                name: "egui_frame",
-                web_info: None,
-                cpu_usage: self.previous_frame_time,
-                native_pixels_per_point: Some(scale_factor),
-                prefer_dark_mode: None,
-            },
-            output: app_output,
-            repaint_signal: self.repaint_signal.clone(),
-        }
     }
 
     pub fn end_frame(&mut self, window: &Window) -> egui::FullOutput {
@@ -93,7 +78,7 @@ impl GuiRenderWgpu {
 
     pub fn render(
         &mut self,
-        context: epi::egui::Context,
+        context: egui::Context,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         screen_descriptor: &ScreenDescriptor,
