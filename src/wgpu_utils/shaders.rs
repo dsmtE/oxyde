@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow::Borrowed,
     cell::RefCell,
     ffi::OsStr,
     path::{Path, PathBuf},
