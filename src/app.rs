@@ -31,6 +31,7 @@ pub struct AppState {
     pub system_state: SystemState,
 
     pub loop_helper: LoopHelper,
+    pub control_flow: ControlFlow,
 }
 
 impl AppState {
@@ -68,6 +69,7 @@ pub struct AppConfig {
     pub is_resizable: bool,
     pub title: &'static str,
     pub icon: Option<&'static str>,
+    pub control_flow: ControlFlow,
 }
 
 impl Default for AppConfig {
@@ -76,6 +78,7 @@ impl Default for AppConfig {
             is_resizable: false,
             title: "Application",
             icon: None,
+            control_flow: ControlFlow::Poll,
         }
     }
 }
@@ -191,6 +194,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         system_state: SystemState::new(window_dimensions),
 
         loop_helper,
+        control_flow: app_config.control_flow,
     };
 
     let mut app = T::create(&mut app_state);
@@ -204,7 +208,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
 }
 
 fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, control_flow: &mut ControlFlow) -> Result<()> {
-    *control_flow = ControlFlow::Wait;
+    *control_flow = app_state.control_flow;
 
     app_state.input_state.handle_event(&event);
     app_state.system_state.handle_event(&event);
