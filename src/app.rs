@@ -330,3 +330,20 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, gui_output: egui
 
     Ok(())
 }
+
+// Update the viewport of the render pass to match the available rect of the gui
+pub fn fit_viewport_to_gui_available_rect(render_pass: &mut wgpu::RenderPass, _app_state: &AppState) {
+    let window_scale_factor = _app_state.window.scale_factor() as f32;
+    // // It must be multiplied by window scale factor as render pass use physical pixels screen size
+    let available_rect = _app_state.gui.available_rect;
+    let available_rect_size = available_rect.size();
+
+    render_pass.set_viewport(
+        available_rect.min.x * window_scale_factor,
+        available_rect.min.y * window_scale_factor,
+        available_rect_size.x * window_scale_factor,
+        available_rect_size.y * window_scale_factor,
+        0.0,
+        1.0,
+    );
+}
