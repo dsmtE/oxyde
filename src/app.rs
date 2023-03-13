@@ -56,6 +56,8 @@ pub trait App {
     ) -> Result<(), wgpu::SurfaceError> {
         Ok(())
     }
+    // fn called after queue submit
+    fn post_render(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
     fn cleanup(&mut self) -> Result<()> { Ok(()) }
 
@@ -261,6 +263,8 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
                 // All other errors (Outdated, Timeout) should be resolved by the next frame
                 Err(e) => eprintln!("{:?}", e),
             }
+
+            app.post_render(app_state)?;
         },
         Event::MainEventsCleared => {
             app.update(app_state)?;
