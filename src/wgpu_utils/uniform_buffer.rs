@@ -50,7 +50,9 @@ impl<Content: bytemuck::Pod> UniformBuffer<Content> {
 
     pub fn update_content(&mut self, queue: &wgpu::Queue, content: Content) {
         let new_content = bytemuck::bytes_of(&content);
-        if self.previous_content == new_content { return; }
+        if self.previous_content == new_content {
+            return;
+        }
         // Could do partial updates since we know the previous state.
         queue.write_buffer(&self.buffer, 0, new_content);
         self.previous_content = new_content.to_vec();

@@ -28,9 +28,9 @@ impl InputsState {
 
 impl WinitEventHandler for InputsState {
     fn handle_event<T>(&mut self, event: &Event<T>) {
-        if let Event::WindowEvent { event: window_event, ..} = event {
+        if let Event::WindowEvent { event: window_event, .. } = event {
             if let WindowEvent::KeyboardInput {
-                input: KeyboardInput {scancode , state, virtual_keycode, .. },
+                input: KeyboardInput { scancode, state, virtual_keycode, .. },
                 ..
             } = *window_event
             {
@@ -59,10 +59,14 @@ impl WinitEventHandler for MouseState {
     fn handle_event<T>(&mut self, event: &Event<T>) {
         match event {
             Event::NewEvents { .. } => {
-                if !self.scrolled { self.wheel_delta = glm::vec2(0.0, 0.0); }
+                if !self.scrolled {
+                    self.wheel_delta = glm::vec2(0.0, 0.0);
+                }
                 self.scrolled = false;
 
-                if !self.moved { self.position_delta = glm::vec2(0.0, 0.0); }
+                if !self.moved {
+                    self.position_delta = glm::vec2(0.0, 0.0);
+                }
                 self.moved = false;
             },
             Event::WindowEvent { event, .. } => match *event {

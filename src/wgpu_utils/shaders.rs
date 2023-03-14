@@ -46,7 +46,7 @@ pub fn load_glsl_shader_module_from_path(device: &wgpu::Device, path: &Path, ent
         options.add_macro_definition("FRAGMENT_SHADER", Some(if kind == ShaderKind::Fragment { "1" } else { "0" }));
         options.add_macro_definition("VERTEX_SHADER", Some(if kind == ShaderKind::Vertex { "1" } else { "0" }));
         options.add_macro_definition("COMPUTE_SHADER", Some(if kind == ShaderKind::Compute { "1" } else { "0" }));
-        options.add_macro_definition(if cfg!(debug_assertions) {"DEBUG"} else {"NDEBUG"} , Some("1"));
+        options.add_macro_definition(if cfg!(debug_assertions) { "DEBUG" } else { "NDEBUG" }, Some("1"));
 
         options.set_include_callback(|name, include_type, source_file, _depth| {
             let path = if include_type == shaderc::IncludeType::Relative {
@@ -83,7 +83,7 @@ pub fn load_glsl_shader_module_from_path(device: &wgpu::Device, path: &Path, ent
 
     let label = Some(path.file_name().unwrap().to_str().unwrap());
 
-    let module =  device.create_shader_module(wgpu::ShaderModuleDescriptor {
+    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label,
         source: wgpu::util::make_spirv(compilation_artifact.as_binary_u8()),
     });
@@ -101,9 +101,7 @@ pub fn load_glsl_shader_module_from_string(
     entry_point_name: &'static str,
     include_paths: Vec<&'static str>,
     label: Option<&str>,
-
 ) -> Result<ShaderModuleWithSourceFiles> {
-
     let source_files = RefCell::new(vec![Source::Code(glsl_code.to_owned())]);
 
     let compilation_artifact = {
@@ -117,7 +115,7 @@ pub fn load_glsl_shader_module_from_string(
         options.add_macro_definition("FRAGMENT_SHADER", Some(if kind == ShaderKind::Fragment { "1" } else { "0" }));
         options.add_macro_definition("VERTEX_SHADER", Some(if kind == ShaderKind::Vertex { "1" } else { "0" }));
         options.add_macro_definition("COMPUTE_SHADER", Some(if kind == ShaderKind::Compute { "1" } else { "0" }));
-        options.add_macro_definition(if cfg!(debug_assertions) {"DEBUG"} else {"NDEBUG"} , Some("1"));
+        options.add_macro_definition(if cfg!(debug_assertions) { "DEBUG" } else { "NDEBUG" }, Some("1"));
 
         options.set_include_callback(|name, include_type, source_file, _depth| {
             if include_type == shaderc::IncludeType::Standard {
@@ -126,20 +124,17 @@ pub fn load_glsl_shader_module_from_string(
                     source_file, name
                 ));
             };
-            
-            let possible_paths = include_paths.iter()
+
+            let possible_paths = include_paths
+                .iter()
                 .map(|path| Path::new(&path).join(name))
-                .filter(|path| path.exists()).collect::<Vec::<PathBuf>>();
-            
+                .filter(|path| path.exists())
+                .collect::<Vec<PathBuf>>();
+
             if possible_paths.len() == 0 {
-                return Err(format!("Unable to find the file \"{}\" in listed include_paths",
-                            name
-                        ));
-            }else if  possible_paths.len() > 1 {
-                return Err(format!(
-                    "Multiples files found for the same include name \"{}\" in listed include_paths",
-                    name
-                ));
+                return Err(format!("Unable to find the file \"{}\" in listed include_paths", name));
+            } else if possible_paths.len() > 1 {
+                return Err(format!("Multiples files found for the same include name \"{}\" in listed include_paths", name));
             }
 
             let path = possible_paths.first().unwrap();
@@ -163,7 +158,7 @@ pub fn load_glsl_shader_module_from_string(
             .compile_into_spirv(&glsl_code, kind, label.unwrap_or("unknown"), entry_point_name, Some(&options))
             .with_context(|| "Failed to compile shader from string")?
     };
-    
+
     if compilation_artifact.get_num_warnings() > 0 {
         warn!("warnings when compiling:\n{}", compilation_artifact.get_warning_messages());
     }

@@ -17,9 +17,7 @@ pub fn uniform() -> wgpu::BindingType {
     }
 }
 
-pub fn sampler(sampler_binding_type: wgpu::SamplerBindingType) -> wgpu::BindingType {
-    wgpu::BindingType::Sampler(sampler_binding_type)
-}
+pub fn sampler(sampler_binding_type: wgpu::SamplerBindingType) -> wgpu::BindingType { wgpu::BindingType::Sampler(sampler_binding_type) }
 
 pub fn texture2D() -> wgpu::BindingType {
     wgpu::BindingType::Texture {
@@ -89,7 +87,7 @@ pub fn image2D(format: wgpu::TextureFormat, access: wgpu::StorageTextureAccess) 
     wgpu::BindingType::StorageTexture {
         access,
         view_dimension: wgpu::TextureViewDimension::D2,
-        format: format,
+        format,
     }
 }
 
@@ -97,7 +95,7 @@ pub fn image2DArray(format: wgpu::TextureFormat, access: wgpu::StorageTextureAcc
     wgpu::BindingType::StorageTexture {
         access,
         view_dimension: wgpu::TextureViewDimension::D2Array,
-        format: format,
+        format,
     }
 }
 
@@ -105,6 +103,6 @@ pub fn image3D(format: wgpu::TextureFormat, access: wgpu::StorageTextureAccess) 
     wgpu::BindingType::StorageTexture {
         access,
         view_dimension: wgpu::TextureViewDimension::D3,
-        format: format,
+        format,
     }
 }

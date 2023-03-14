@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use egui_wgpu_backend::RenderPass;
 
 use egui_winit_platform::{Platform, PlatformDescriptor};
-use std::{time::Instant};
+use std::time::Instant;
 use wgpu::CommandEncoder;
 use winit::{event::Event, window::Window};
 
@@ -14,14 +14,12 @@ pub use egui_wgpu_backend::ScreenDescriptor;
 //     fn request_repaint(&self) {}
 // }
 
-
 pub struct Gui {
     platform: Platform,
     start_time: Instant,
     last_frame_start: Instant,
     previous_frame_time: Option<f32>,
     pub available_rect: egui::Rect,
-
 }
 
 impl Gui {

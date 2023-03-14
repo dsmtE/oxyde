@@ -48,7 +48,6 @@ impl PingPongTexture {
             .sampler(sampler)
             .create(device, Some(format!("{}[pong]", self.label.unwrap_or("unknown")).as_str()));
 
-
         (bind_group_ping, bind_group_pong)
     }
 
