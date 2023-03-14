@@ -14,8 +14,8 @@ impl PingPongTexture {
         descriptor: &wgpu::TextureDescriptor,
         label: Option<&'static str>, // Optional debug label. This will show up in graphics debuggers for easy identification.
     ) -> Result<Self, wgpu::Error> {
-        let texture_ping = device.create_texture(&descriptor);
-        let texture_pong = device.create_texture(&descriptor);
+        let texture_ping = device.create_texture(descriptor);
+        let texture_pong = device.create_texture(descriptor);
         let view_ping = texture_ping.create_view(&wgpu::TextureViewDescriptor::default());
         let view_pong = texture_pong.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -25,7 +25,7 @@ impl PingPongTexture {
                 view_dimension: wgpu::TextureViewDimension::D2,
                 sample_type: wgpu::TextureSampleType::Float { filterable: true },
             })
-            .add_binding_fragment(wgpu::BindingType::Sampler { 0: wgpu::SamplerBindingType::Filtering })
+            .add_binding_fragment(wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering))
             .create(device, label);
 
         Ok(Self {

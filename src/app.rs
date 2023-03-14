@@ -247,9 +247,9 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
             // TODO move that
             // TODO: fix render method here by calling sub app render features
             let full_output = {
-                let _frame_data = app_state.gui.start_frame(app_state.window.scale_factor() as _);
+                app_state.gui.start_frame(app_state.window.scale_factor() as _);
                 app.render_gui(&app_state.gui.context())?;
-                app_state.gui.end_frame(&mut app_state.window)
+                app_state.gui.end_frame(& app_state.window)
             };
 
             match render_app(app, app_state, full_output) {

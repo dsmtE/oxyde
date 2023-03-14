@@ -42,11 +42,11 @@ impl Gui {
         }
     }
 
-    pub fn handle_event(&mut self, event: &Event<()>) { self.platform.handle_event(&event); }
+    pub fn handle_event(&mut self, event: &Event<()>) { self.platform.handle_event(event); }
 
     pub fn context(&self) -> egui::Context { self.platform.context() }
 
-    pub fn start_frame<'a>(&mut self, _scale_factor: f32) {
+    pub fn start_frame(&mut self, _scale_factor: f32) {
         self.platform.update_time(self.start_time.elapsed().as_secs_f64());
 
         // Begin to draw the UI frame.
@@ -59,7 +59,7 @@ impl Gui {
         let frame_time = self.last_frame_start.elapsed().as_secs_f32();
         self.previous_frame_time = Some(frame_time);
 
-        self.platform.end_frame(Some(&window))
+        self.platform.end_frame(Some(window))
     }
 }
 
@@ -87,14 +87,14 @@ impl GuiRenderWgpu {
         // TODO: how handle not repaint ui if isn't needed
         // if gui_output.needs_repaint {
 
-        self.renderpass.add_textures(&device, &queue, &gui_output.textures_delta)?;
+        self.renderpass.add_textures(device, queue, &gui_output.textures_delta)?;
 
         let paint_jobs = context.tessellate(gui_output.shapes);
 
-        self.renderpass.update_buffers(&device, &queue, &paint_jobs, &screen_descriptor);
+        self.renderpass.update_buffers(device, queue, &paint_jobs, screen_descriptor);
 
         self.renderpass
-            .execute(encoder, &output_view, &paint_jobs, &screen_descriptor, None)
+            .execute(encoder, output_view, &paint_jobs, screen_descriptor, None)
             .context("Failed to execute egui renderpass!")?;
 
         // Remove unused textures

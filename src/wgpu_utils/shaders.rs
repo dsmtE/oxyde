@@ -24,7 +24,7 @@ pub struct ShaderModuleWithSourceFiles {
 pub fn load_glsl_shader_module_from_path(device: &wgpu::Device, path: &Path, entry_point_name: &'static str) -> Result<ShaderModuleWithSourceFiles> {
     let source_files = RefCell::new(vec![Source::File(path.canonicalize().unwrap())]);
 
-    let glsl_code = std::fs::read_to_string(&path).with_context(|| format!("Failed to read shader file \"{:?}\"", path))?;
+    let glsl_code = std::fs::read_to_string(path).with_context(|| format!("Failed to read shader file \"{:?}\"", path))?;
 
     let kind = match path.extension().and_then(OsStr::to_str) {
         Some("frag") => ShaderKind::Fragment,
@@ -131,7 +131,7 @@ pub fn load_glsl_shader_module_from_string(
                 .filter(|path| path.exists())
                 .collect::<Vec<PathBuf>>();
 
-            if possible_paths.len() == 0 {
+            if possible_paths.is_empty() {
                 return Err(format!("Unable to find the file \"{}\" in listed include_paths", name));
             } else if possible_paths.len() > 1 {
                 return Err(format!("Multiples files found for the same include name \"{}\" in listed include_paths", name));
@@ -155,7 +155,7 @@ pub fn load_glsl_shader_module_from_string(
         });
 
         compiler
-            .compile_into_spirv(&glsl_code, kind, label.unwrap_or("unknown"), entry_point_name, Some(&options))
+            .compile_into_spirv(glsl_code, kind, label.unwrap_or("unknown"), entry_point_name, Some(&options))
             .with_context(|| "Failed to compile shader from string")?
     };
 
