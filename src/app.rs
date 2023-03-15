@@ -3,7 +3,7 @@ use std::iter;
 use winit::{
     event::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::{Icon, WindowBuilder},
+    window::WindowBuilder,
 };
 
 use anyhow::Result;
@@ -70,6 +70,7 @@ pub trait App {
 pub struct AppConfig {
     pub is_resizable: bool,
     pub title: &'static str,
+    #[cfg(feature = "icon")]
     pub icon: Option<&'static str>,
     pub control_flow: ControlFlow,
 }
@@ -79,6 +80,7 @@ impl Default for AppConfig {
         Self {
             is_resizable: false,
             title: "Application",
+            #[cfg(feature = "icon")]
             icon: None,
             control_flow: ControlFlow::Poll,
         }
@@ -116,10 +118,11 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         .with_transparent(false)
         .with_title(app_config.title);
 
+    #[cfg(feature = "icon")]
     if let Some(icon_path) = app_config.icon {
         let image = image::io::Reader::open(icon_path)?.decode()?.into_rgba8();
         let (width, height) = image.dimensions();
-        let icon = Icon::from_rgba(image.into_raw(), width, height)?;
+        let icon = winit::window::Icon::from_rgba(image.into_raw(), width, height)?;
         window_builder = window_builder.with_window_icon(Some(icon));
     }
 
