@@ -60,3 +60,46 @@ impl<Content: bytemuck::Pod> UniformBuffer<Content> {
 
     pub fn binding_resource(&self) -> wgpu::BindingResource { self.buffer.as_entire_binding() }
 }
+
+
+pub struct UniformBufferWrapper<Content> {
+    content: Content,
+    uniform_buffer: UniformBuffer<Content>,
+    bind_group_layout_with_desc: super::binding_builder::BindGroupLayoutWithDesc,
+    bind_group: wgpu::BindGroup,
+}
+
+impl<Content: bytemuck::Pod> UniformBufferWrapper<Content> {
+    pub fn new(device: &wgpu::Device, content: Content, visibility: wgpu::ShaderStages) -> Self {
+        let uniform_buffer = UniformBuffer::new_with_data(device, &content);
+
+        let bind_group_layout_with_desc = super::binding_builder::BindGroupLayoutBuilder::new()
+            .add_binding(visibility, wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<Content>() as _),
+            })
+            .create(device, Some(&format!("BindGroupLayout: {}", UniformBuffer::<Content>::name())));
+
+        let bind_group = super::binding_builder::BindGroupBuilder::new(&bind_group_layout_with_desc)
+            .resource(uniform_buffer.binding_resource())
+            .create(device, Some(&format!("BindGroup: {}", UniformBuffer::<Content>::name())));
+
+        UniformBufferWrapper {
+            content,
+            uniform_buffer,
+            bind_group_layout_with_desc,
+            bind_group,
+        }
+    }
+
+    pub fn update_content(&mut self, queue: &wgpu::Queue) {
+        self.uniform_buffer.update_content(queue, self.content);
+    }
+
+    pub fn content(&mut self) -> &mut Content { &mut self.content }
+
+    pub fn bind_group(&self) -> &wgpu::BindGroup { &self.bind_group }
+
+    pub fn layout(&self) -> &wgpu::BindGroupLayout { &self.bind_group_layout_with_desc.layout }
+}
