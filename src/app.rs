@@ -200,7 +200,18 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         control_flow: app_config.control_flow,
     };
 
+    let (tx, rx) = std::sync::mpsc::channel::<wgpu::Error>();
+    app_state.device.on_uncaptured_error(Box::new(move |e: wgpu::Error| {
+        tx.send(e).expect("sending error failed");
+    }));
+
     let mut app = T::create(&mut app_state);
+    
+    app_state.device.on_uncaptured_error(Box::new(|err| panic!("{}", err)));
+
+    if let Ok(err) = rx.try_recv() {
+        panic!("{}", err);
+    }
 
     // Run
     event_loop.run(move |event, _, control_flow| {
