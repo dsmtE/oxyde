@@ -81,7 +81,7 @@ impl PingPongBuffer {
 
         (bind_group_layout_builder_descriptor, ping_bind_group, pong_bind_group)
     }
-    pub fn get_current_source_bind_group(&self) -> &wgpu::BindGroup {
+    pub fn get_current_bind_group(&self) -> &wgpu::BindGroup {
         if self.state {
             &self.ping_bind_group
         } else {
@@ -89,13 +89,16 @@ impl PingPongBuffer {
         }
     }
 
-    pub fn get_next_target_bind_group(&mut self) -> &wgpu::BindGroup {
-        self.state = !self.state;
+    pub fn get_next_bind_group(&self) -> &wgpu::BindGroup {
         if self.state {
-            &self.ping_bind_group
-        } else {
             &self.pong_bind_group
+        } else {
+            &self.ping_bind_group
         }
+    }
+
+    pub fn swap_state(&mut self) {
+        self.state = !self.state;
     }
 
     pub fn get_target_buffer(&self) -> &wgpu::Buffer {
