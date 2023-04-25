@@ -58,6 +58,10 @@ impl<Content: bytemuck::Pod> UniformBuffer<Content> {
         self.previous_content = new_content.to_vec();
     }
 
+    pub fn force_update_content(&self, queue: &wgpu::Queue, content: Content) {
+        queue.write_buffer(&self.buffer, 0, bytemuck::bytes_of(&content));
+    }
+
     pub fn binding_resource(&self) -> wgpu::BindingResource { self.buffer.as_entire_binding() }
 }
 
@@ -97,7 +101,12 @@ impl<Content: bytemuck::Pod> UniformBufferWrapper<Content> {
         self.uniform_buffer.update_content(queue, self.content);
     }
 
-    pub fn content(&mut self) -> &mut Content { &mut self.content }
+    pub fn force_update_content(&self, queue: &wgpu::Queue) {
+        self.uniform_buffer.force_update_content(queue, self.content);
+    }
+
+    pub fn content_mut(&mut self) -> &mut Content { &mut self.content }
+    pub fn content(&self) -> &Content { &self.content }
 
     pub fn bind_group(&self) -> &wgpu::BindGroup { &self.bind_group }
 
