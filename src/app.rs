@@ -51,7 +51,6 @@ pub trait App {
     fn render(
         &mut self,
         _app_state: &mut AppState,
-        _encoder: &mut wgpu::CommandEncoder,
         _output_view: &wgpu::TextureView,
     ) -> Result<(), wgpu::SurfaceError> {
         Ok(())
@@ -306,15 +305,9 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, gui_output: egui
     let output: wgpu::SurfaceTexture = app_state.surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-    let mut encoder: wgpu::CommandEncoder = app_state
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render Encoder") });
-
-    app.render(app_state, &mut encoder, &view)?;
+    app.render(app_state, &view)?;
 
     // draw UI
-    encoder.insert_debug_marker("Render GUI");
-
     let window_dimensions = app_state.window.inner_size();
 
     let screen_descriptor = ScreenDescriptor {
@@ -330,14 +323,11 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, gui_output: egui
             &app_state.device,
             &app_state.queue,
             &screen_descriptor,
-            &mut encoder,
             &view,
             gui_output,
         )
         .expect("Failed to execute gui render pass!");
 
-    // submit will accept anything that implements IntoIter
-    app_state.queue.submit(iter::once(encoder.finish()));
     output.present();
 
     Ok(())

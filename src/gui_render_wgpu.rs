@@ -80,10 +80,13 @@ impl GuiRenderWgpu {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         screen_descriptor: &ScreenDescriptor,
-        encoder: &mut CommandEncoder,
         output_view: &wgpu::TextureView,
         gui_output: egui::FullOutput,
     ) -> Result<()> {
+
+        let mut encoder: wgpu::CommandEncoder = device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
+
         // TODO: how handle not repaint ui if isn't needed
         // if gui_output.needs_repaint {
 
@@ -94,11 +97,14 @@ impl GuiRenderWgpu {
         self.renderpass.update_buffers(device, queue, &paint_jobs, screen_descriptor);
 
         self.renderpass
-            .execute(encoder, output_view, &paint_jobs, screen_descriptor, None)
+            .execute(&mut encoder, output_view, &paint_jobs, screen_descriptor, None)
             .context("Failed to execute egui renderpass!")?;
 
         // Remove unused textures
         self.renderpass.remove_textures(gui_output.textures_delta).unwrap();
+        
+        // submit will accept anything that implements IntoIter
+        queue.submit(Some(encoder.finish()));
 
         Ok(())
     }
