@@ -58,13 +58,10 @@ impl<Content: bytemuck::Pod> UniformBuffer<Content> {
         self.previous_content = new_content.to_vec();
     }
 
-    pub fn force_update_content(&self, queue: &wgpu::Queue, content: Content) {
-        queue.write_buffer(&self.buffer, 0, bytemuck::bytes_of(&content));
-    }
+    pub fn force_update_content(&self, queue: &wgpu::Queue, content: Content) { queue.write_buffer(&self.buffer, 0, bytemuck::bytes_of(&content)); }
 
     pub fn binding_resource(&self) -> wgpu::BindingResource { self.buffer.as_entire_binding() }
 }
-
 
 pub struct UniformBufferWrapper<Content> {
     content: Content,
@@ -78,11 +75,14 @@ impl<Content: bytemuck::Pod> UniformBufferWrapper<Content> {
         let uniform_buffer = UniformBuffer::new_with_data(device, &content);
 
         let bind_group_layout_with_desc = super::binding_builder::BindGroupLayoutBuilder::new()
-            .add_binding(visibility, wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<Content>() as _),
-            })
+            .add_binding(
+                visibility,
+                wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<Content>() as _),
+                },
+            )
             .create(device, Some(&format!("BindGroupLayout: {}", UniformBuffer::<Content>::name())));
 
         let bind_group = super::binding_builder::BindGroupBuilder::new(&bind_group_layout_with_desc)
@@ -97,13 +97,9 @@ impl<Content: bytemuck::Pod> UniformBufferWrapper<Content> {
         }
     }
 
-    pub fn update_content(&mut self, queue: &wgpu::Queue) {
-        self.uniform_buffer.update_content(queue, self.content);
-    }
+    pub fn update_content(&mut self, queue: &wgpu::Queue) { self.uniform_buffer.update_content(queue, self.content); }
 
-    pub fn force_update_content(&self, queue: &wgpu::Queue) {
-        self.uniform_buffer.force_update_content(queue, self.content);
-    }
+    pub fn force_update_content(&self, queue: &wgpu::Queue) { self.uniform_buffer.force_update_content(queue, self.content); }
 
     pub fn content_mut(&mut self) -> &mut Content { &mut self.content }
     pub fn content(&self) -> &Content { &self.content }

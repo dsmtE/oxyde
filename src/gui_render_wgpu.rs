@@ -3,7 +3,6 @@ use egui_wgpu_backend::RenderPass;
 
 use egui_winit_platform::{Platform, PlatformDescriptor};
 use std::time::Instant;
-use wgpu::CommandEncoder;
 use winit::{event::Event, window::Window};
 
 pub use egui_wgpu_backend::ScreenDescriptor;
@@ -83,9 +82,7 @@ impl GuiRenderWgpu {
         output_view: &wgpu::TextureView,
         gui_output: egui::FullOutput,
     ) -> Result<()> {
-
-        let mut encoder: wgpu::CommandEncoder = device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
+        let mut encoder: wgpu::CommandEncoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
 
         // TODO: how handle not repaint ui if isn't needed
         // if gui_output.needs_repaint {
@@ -102,7 +99,7 @@ impl GuiRenderWgpu {
 
         // Remove unused textures
         self.renderpass.remove_textures(gui_output.textures_delta).unwrap();
-        
+
         // submit will accept anything that implements IntoIter
         queue.submit(Some(encoder.finish()));
 

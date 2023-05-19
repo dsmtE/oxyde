@@ -1,14 +1,6 @@
 use super::binding_builder;
 
-use wgpu::{
-    Device,
-    BufferDescriptor,
-    BufferUsages,
-    Buffer,
-    BufferAddress,
-    CommandEncoder,
-    Queue,
-};
+use wgpu::{Buffer, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoder, Device, Queue};
 
 use std::mem::size_of;
 
@@ -27,7 +19,7 @@ impl SingleBufferWrapper {
         visibility: wgpu::ShaderStages,
         ty: wgpu::BufferBindingType,
         has_dynamic_offset: bool,
-        label: Option<&str>
+        label: Option<&str>,
     ) -> Self {
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(format!("{} Buffer", label.unwrap_or("unknown")).as_str()),
@@ -53,14 +45,16 @@ impl SingleBufferWrapper {
         visibility: wgpu::ShaderStages,
         ty: wgpu::BufferBindingType,
         has_dynamic_offset: bool,
-        label: Option<&str>
-    ) -> Self 
-    where T: bytemuck::Pod {
+        label: Option<&str>,
+    ) -> Self
+    where
+        T: bytemuck::Pod,
+    {
         let buffer = wgpu::util::DeviceExt::create_buffer_init(
             device,
             &wgpu::util::BufferInitDescriptor {
                 label: Some(format!("{} Buffer", label.unwrap_or("unknown")).as_str()),
-                contents: bytemuck::cast_slice(&slice_content),
+                contents: bytemuck::cast_slice(slice_content),
                 usage: usages,
             },
         );
@@ -94,17 +88,12 @@ impl SingleBufferWrapper {
         let label = label.unwrap_or("unknown");
 
         let bind_group_layout_with_desc = binding_builder::BindGroupLayoutBuilder::new()
-        .add_binding(visibility, wgpu::BindingType::Buffer {
-            ty,
-            has_dynamic_offset,
-            min_binding_size,
-        })
-        .create(device, Some(format!("{} BindGroupLayout", label).as_str()));
+            .add_binding(visibility, wgpu::BindingType::Buffer { ty, has_dynamic_offset, min_binding_size })
+            .create(device, Some(format!("{} BindGroupLayout", label).as_str()));
 
-        
         let bind_group = binding_builder::BindGroupBuilder::new(&bind_group_layout_with_desc)
-        .resource(buffer.as_entire_binding())
-        .create(device, Some(format!("{} BindGroup", label).as_str()));
+            .resource(buffer.as_entire_binding())
+            .create(device, Some(format!("{} BindGroup", label).as_str()));
 
         (bind_group_layout_with_desc, bind_group)
     }
@@ -124,10 +113,11 @@ pub fn create_staging_buffer(device: &Device, read_or_write: bool, size: BufferA
     device.create_buffer(&BufferDescriptor {
         label: None,
         size,
-        usage: BufferUsages::COPY_DST | match read_or_write {
-            true => BufferUsages::MAP_READ,
-            false => BufferUsages::COPY_SRC,
-        },
+        usage: BufferUsages::COPY_DST
+            | match read_or_write {
+                true => BufferUsages::MAP_READ,
+                false => BufferUsages::COPY_SRC,
+            },
         mapped_at_creation: false,
     })
 }
@@ -164,30 +154,34 @@ impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> StagingBufferWrapper<T, READ_O
         command_encoder.copy_buffer_to_buffer(buffer, 0, &self.staging_buffer, 0, self.bytes_size() as BufferAddress);
     }
 
-    pub fn map_buffer(&mut self) {
-        self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {});
-    }
+    pub fn map_buffer(&mut self) { self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {}); }
 
     pub fn read_and_unmap_buffer(&mut self) {
         let bytes_size = self.bytes_size();
         let buffer_slice = self.staging_buffer.slice(..);
-        self.values.copy_from_slice(bytemuck::cast_slice(&buffer_slice.get_mapped_range()[0..bytes_size]));
+        self.values
+            .copy_from_slice(bytemuck::cast_slice(&buffer_slice.get_mapped_range()[0..bytes_size]));
         self.staging_buffer.unmap();
     }
 
-    #[inline] pub fn len(&self) -> usize { self.values.len() }
-    #[inline] pub fn bytes_size(&self) -> usize { self.len() * size_of::<T>() }
-    #[inline] pub fn values_as_slice(&self) -> &[T] { self.values.as_slice() }
-    #[inline] pub fn values_as_slice_mut(&mut self) -> &mut [T] { self.values.as_mut_slice() }
-    #[inline] pub fn iter(&self) -> core::slice::Iter<'_, T> { self.values.iter() }
-    #[inline] pub fn clear(&mut self) { self.values.fill(T::zeroed()); }
-
+    #[inline]
+    pub fn len(&self) -> usize { self.values.len() }
+    #[inline]
+    pub fn is_empty(&self) -> bool { self.values.is_empty() }
+    #[inline]
+    pub fn bytes_size(&self) -> usize { self.len() * size_of::<T>() }
+    #[inline]
+    pub fn values_as_slice(&self) -> &[T] { self.values.as_slice() }
+    #[inline]
+    pub fn values_as_slice_mut(&mut self) -> &mut [T] { self.values.as_mut_slice() }
+    #[inline]
+    pub fn iter(&self) -> core::slice::Iter<'_, T> { self.values.iter() }
+    #[inline]
+    pub fn clear(&mut self) { self.values.fill(T::zeroed()); }
 }
 
 impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> std::ops::Index<usize> for StagingBufferWrapper<T, READ_OR_WRITE> {
     type Output = T;
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.values[index]
-    }
+    fn index(&self, index: usize) -> &Self::Output { &self.values[index] }
 }

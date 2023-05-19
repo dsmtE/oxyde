@@ -31,7 +31,7 @@ impl PingPongBuffer {
             pong_ping_bind_group,
             single_buffer_bind_group_layout_builder_descriptor,
             ping_bind_group,
-            pong_bind_group
+            pong_bind_group,
         ) = Self::create_layout_and_bind_group(
             device,
             &ping_buffer,
@@ -39,7 +39,7 @@ impl PingPongBuffer {
             single_buffer_visibility,
             ping_pong_buffer_visibility,
             descriptor.label,
-            descriptor.size
+            descriptor.size,
         );
 
         Self {
@@ -56,11 +56,11 @@ impl PingPongBuffer {
     }
 
     pub fn from_buffer_init_descriptor(
-            device: &wgpu::Device,
-            descriptor: &wgpu::util::BufferInitDescriptor,
-            single_buffer_visibility: wgpu::ShaderStages,
-            ping_pong_buffer_visibility: wgpu::ShaderStages,
-        ) -> Self {
+        device: &wgpu::Device,
+        descriptor: &wgpu::util::BufferInitDescriptor,
+        single_buffer_visibility: wgpu::ShaderStages,
+        ping_pong_buffer_visibility: wgpu::ShaderStages,
+    ) -> Self {
         let ping_buffer = wgpu::util::DeviceExt::create_buffer_init(device, descriptor);
         let pong_buffer = wgpu::util::DeviceExt::create_buffer_init(device, descriptor);
 
@@ -70,7 +70,7 @@ impl PingPongBuffer {
             pong_ping_bind_group,
             single_buffer_bind_group_layout_builder_descriptor,
             ping_bind_group,
-            pong_bind_group
+            pong_bind_group,
         ) = Self::create_layout_and_bind_group(
             device,
             &ping_buffer,
@@ -78,7 +78,7 @@ impl PingPongBuffer {
             single_buffer_visibility,
             ping_pong_buffer_visibility,
             descriptor.label,
-            descriptor.contents.len() as u64
+            descriptor.contents.len() as u64,
         );
 
         Self {
@@ -102,22 +102,35 @@ impl PingPongBuffer {
         ping_pong_buffer_visibility: wgpu::ShaderStages,
         label: Option<&str>,
         size: u64,
-    ) -> (BindGroupLayoutWithDesc, wgpu::BindGroup, wgpu::BindGroup, BindGroupLayoutWithDesc, wgpu::BindGroup, wgpu::BindGroup) {
+    ) -> (
+        BindGroupLayoutWithDesc,
+        wgpu::BindGroup,
+        wgpu::BindGroup,
+        BindGroupLayoutWithDesc,
+        wgpu::BindGroup,
+        wgpu::BindGroup,
+    ) {
         let label = label.unwrap_or("unknown");
 
         let ping_pong_bind_group_layout_builder_descriptor = BindGroupLayoutBuilder::new()
-            .add_binding(ping_pong_buffer_visibility, wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                has_dynamic_offset: false,
-                min_binding_size: wgpu::BufferSize::new(size),
-            })
-            .add_binding(ping_pong_buffer_visibility, wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                has_dynamic_offset: false,
-                min_binding_size: wgpu::BufferSize::new(size),
-            })
+            .add_binding(
+                ping_pong_buffer_visibility,
+                wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: wgpu::BufferSize::new(size),
+                },
+            )
+            .add_binding(
+                ping_pong_buffer_visibility,
+                wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: wgpu::BufferSize::new(size),
+                },
+            )
             .create(device, Some(format!("{} ping_pong_bind_group_layout", label).as_str()));
-        
+
         let ping_pong_bind_group = BindGroupBuilder::new(&ping_pong_bind_group_layout_builder_descriptor)
             .resource(ping_buffer.as_entire_binding())
             .resource(pong_buffer.as_entire_binding())
@@ -127,13 +140,16 @@ impl PingPongBuffer {
             .resource(pong_buffer.as_entire_binding())
             .resource(ping_buffer.as_entire_binding())
             .create(device, Some(format!("{} pong_ping_bind_group", label).as_str()));
-        
+
         let single_buffer_bind_group_layout_builder_descriptor = BindGroupLayoutBuilder::new()
-            .add_binding(single_buffer_visibility, wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                has_dynamic_offset: false,
-                min_binding_size: wgpu::BufferSize::new(size),
-            })
+            .add_binding(
+                single_buffer_visibility,
+                wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: wgpu::BufferSize::new(size),
+                },
+            )
             .create(device, Some(format!("{} buffer_bind_group_layout", label).as_str()));
 
         let ping_bind_group = BindGroupBuilder::new(&single_buffer_bind_group_layout_builder_descriptor)
@@ -143,14 +159,14 @@ impl PingPongBuffer {
         let pong_bind_group = BindGroupBuilder::new(&single_buffer_bind_group_layout_builder_descriptor)
             .resource(pong_buffer.as_entire_binding())
             .create(device, Some(format!("{} pong_bind_group", label).as_str()));
-        
+
         (
             ping_pong_bind_group_layout_builder_descriptor,
             ping_pong_bind_group,
             pong_ping_bind_group,
             single_buffer_bind_group_layout_builder_descriptor,
             ping_bind_group,
-            pong_bind_group
+            pong_bind_group,
         )
     }
     pub fn get_current_ping_pong_bind_group(&self) -> &wgpu::BindGroup {
@@ -161,9 +177,7 @@ impl PingPongBuffer {
         }
     }
 
-    pub fn swap_state(&mut self) {
-        self.state = !self.state;
-    }
+    pub fn swap_state(&mut self) { self.state = !self.state; }
 
     pub fn get_current_source_bind_group(&self) -> &wgpu::BindGroup {
         if self.state {

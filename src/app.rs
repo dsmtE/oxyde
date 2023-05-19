@@ -48,13 +48,7 @@ pub trait App {
 
     fn render_gui(&mut self, _ctx: &egui::Context) -> Result<()> { Ok(()) }
 
-    fn render(
-        &mut self,
-        _app_state: &mut AppState,
-        _output_view: &wgpu::TextureView,
-    ) -> Result<(), wgpu::SurfaceError> {
-        Ok(())
-    }
+    fn render(&mut self, _app_state: &mut AppState, _output_view: &wgpu::TextureView) -> Result<(), wgpu::SurfaceError> { Ok(()) }
     // fn called after queue submit
     fn post_render(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
@@ -205,7 +199,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     }));
 
     let mut app = T::create(&mut app_state);
-    
+
     app_state.device.on_uncaptured_error(Box::new(|err| panic!("{}", err)));
 
     if let Ok(err) = rx.try_recv() {
@@ -262,7 +256,7 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
             let full_output = {
                 app_state.gui.start_frame(app_state.window.scale_factor() as _);
                 app.render_gui(&app_state.gui.context())?;
-                app_state.gui.end_frame(& app_state.window)
+                app_state.gui.end_frame(&app_state.window)
             };
 
             match render_app(app, app_state, full_output) {
@@ -318,14 +312,7 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, gui_output: egui
 
     app_state
         .gui_render
-        .render(
-            app_state.gui.context(),
-            &app_state.device,
-            &app_state.queue,
-            &screen_descriptor,
-            &view,
-            gui_output,
-        )
+        .render(app_state.gui.context(), &app_state.device, &app_state.queue, &screen_descriptor, &view, gui_output)
         .expect("Failed to execute gui render pass!");
 
     output.present();

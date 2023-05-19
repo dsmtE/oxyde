@@ -1,8 +1,8 @@
 pub mod binding_builder;
 pub mod binding_glsl;
+pub mod buffers;
 mod ping_pong_buffer;
 mod ping_pong_texture;
-pub mod buffers;
 
 #[cfg(feature = "glsl")]
 pub mod shaders;
