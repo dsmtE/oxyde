@@ -2,17 +2,17 @@ use nalgebra_glm as glm;
 use std::time::Instant;
 use winit::{
     dpi::PhysicalSize,
-    event::{ElementState, Event, KeyboardInput, MouseButton, MouseScrollDelta, WindowEvent},
+    event::{self, ElementState, Event, MouseButton, MouseScrollDelta, WindowEvent},
 };
 
 pub struct InputsState {
-    pub keystates: [bool; 1024],
+    pub scancode_states: [bool; 1024],
     pub mouse: MouseState,
 }
 impl Default for InputsState {
     fn default() -> Self {
         Self {
-            keystates: [false; 1024],
+            scancode_states: [false; 1024],
             mouse: MouseState::default(),
         }
     }
@@ -23,18 +23,18 @@ pub trait WinitEventHandler {
 }
 
 impl InputsState {
-    pub fn is_key_pressed(&self, scancode: u32) -> bool { self.keystates[scancode as usize] }
+    pub fn is_key_pressed(&self, scancode: u32) -> bool { self.scancode_states[scancode as usize] }
 }
 
 impl WinitEventHandler for InputsState {
     fn handle_event<T>(&mut self, event: &Event<T>) {
         if let Event::WindowEvent { event: window_event, .. } = event {
             if let WindowEvent::KeyboardInput {
-                input: KeyboardInput { scancode, state, virtual_keycode, .. },
+                input: event::KeyboardInput { scancode, state, virtual_keycode, .. },
                 ..
             } = *window_event
             {
-                self.keystates[scancode as usize] = state == ElementState::Pressed;
+                self.scancode_states[scancode as usize] = state == ElementState::Pressed;
                 trace!("{:?} pressed corresponding to the scancode {} (state: {:?})", virtual_keycode, scancode, state);
             }
         }

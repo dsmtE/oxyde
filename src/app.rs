@@ -1,7 +1,7 @@
 use std::iter;
 
 use winit::{
-    event::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent},
+    event::{self, ElementState, Event, MouseButton, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -51,7 +51,7 @@ pub trait App {
 
     fn update(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
-    fn render_gui(&mut self, _ctx: &egui::Context) -> Result<()> { Ok(()) }
+    fn render_gui(&mut self, _app_state: &mut AppState, _ctx: &egui::Context) -> Result<()> { Ok(()) }
 
     fn render(&mut self, _app_state: &mut AppState, _output_view: &wgpu::TextureView) -> Result<(), wgpu::SurfaceError> { Ok(()) }
     // fn called after queue submit
@@ -60,7 +60,7 @@ pub trait App {
     fn cleanup(&mut self) -> Result<()> { Ok(()) }
 
     fn on_mouse(&mut self, _app_state: &mut AppState, _button: &MouseButton, _button_state: &ElementState) -> Result<()> { Ok(()) }
-    fn on_key(&mut self, _app_state: &mut AppState, _input: KeyboardInput) -> Result<()> { Ok(()) }
+    fn on_key(&mut self, _app_state: &mut AppState, _input: event::KeyboardInput) -> Result<()> { Ok(()) }
 
     fn handle_event(&mut self, _app_state: &mut AppState, _event: &Event<()>) -> Result<()> { Ok(()) }
 }
@@ -137,7 +137,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     // TODO : encapsulate renderer initialisation
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends: rendering_config.backend,
-        dx12_shader_compiler: wgpu::Dx12Compiler::default(),
+        ..Default::default()
     });
     let surface = unsafe { instance.create_surface(&window) }.unwrap();
 
@@ -168,6 +168,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         alpha_mode: wgpu::CompositeAlphaMode::default(),
         view_formats: vec![],
     };
+
     surface.configure(&device, &config);
 
     let gui = Gui::new(ScreenDescriptor {
@@ -194,7 +195,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         system_state: SystemState::new(window_dimensions),
 
         control_flow: app_config.control_flow,
-
+        
         last_frame_time: std::time::Instant::now(),
         target_frame_duration: std::time::Duration::from_micros(16_666),
     };
@@ -243,7 +244,7 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
             WindowEvent::CloseRequested
             | WindowEvent::KeyboardInput {
                 input:
-                    KeyboardInput {
+                    event::KeyboardInput {
                         state: ElementState::Pressed,
                         virtual_keycode: Some(VirtualKeyCode::Escape),
                         ..
@@ -261,7 +262,7 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
             // TODO: fix render method here by calling sub app render features
             let full_output = {
                 app_state.gui.start_frame(app_state.window.scale_factor() as _);
-                app.render_gui(&app_state.gui.context())?;
+                app.render_gui(app_state, &app_state.gui.context())?;
                 app_state.gui.end_frame(&app_state.window)
             };
 
