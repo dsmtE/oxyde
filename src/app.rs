@@ -13,7 +13,6 @@ use crate::{
     input::{InputsState, SystemState, WinitEventHandler},
 };
 
-use spin_sleep::LoopHelper;
 
 pub struct AppState {
     pub window: winit::window::Window,
@@ -30,14 +29,20 @@ pub struct AppState {
     pub input_state: InputsState,
     pub system_state: SystemState,
 
-    pub loop_helper: LoopHelper,
     pub control_flow: ControlFlow,
+
+    last_frame_time: std::time::Instant,
+    target_frame_duration: std::time::Duration,
 }
 
 impl AppState {
     pub fn set_fullscreen(&mut self) {
         self.window
             .set_fullscreen(Some(winit::window::Fullscreen::Borderless(self.window.primary_monitor())));
+    }
+
+    pub fn set_target_fps(&mut self, fps: u32) {
+        self.target_frame_duration = std::time::Duration::from_micros((1_000_000.0 / fps as f32) as u64);
     }
 }
 
@@ -172,8 +177,6 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
 
     let gui_render = GuiRenderWgpu::new(&device, config.format, 1);
 
-    let loop_helper = LoopHelper::builder().report_interval_s(1.0).build_with_target_rate(60);
-
     let mut app_state = AppState {
         window,
 
@@ -189,8 +192,10 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         input_state: InputsState::default(),
         system_state: SystemState::new(window_dimensions),
 
-        loop_helper,
         control_flow: app_config.control_flow,
+
+        last_frame_time: std::time::Instant::now(),
+        target_frame_duration: std::time::Duration::from_micros(16_666),
     };
 
     let (tx, rx) = std::sync::mpsc::channel::<wgpu::Error>();
@@ -279,12 +284,20 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
             // window.request_redraw();
             app_state.window.request_redraw();
 
-            if let Some(_fps) = app_state.loop_helper.report_rate() {
-                // println!("fps report : {}", fps);
+            let now = std::time::Instant::now();
+            let next_frame_time = app_state.last_frame_time + app_state.target_frame_duration;
+            if now > next_frame_time {
+                log::warn!(
+                    "We are running behind the target frame rate of {:.0} fps (current frame took {:?} (~ {:.0} fps ))",
+                    1.0 / app_state.target_frame_duration.as_secs_f32(),
+                    now - app_state.last_frame_time,
+                    1.0 / (now - app_state.last_frame_time).as_secs_f32()
+                );
+            } else {
+                spin_sleep::sleep(next_frame_time.duration_since(now));
             }
-
-            app_state.loop_helper.loop_sleep_no_spin(); // or `loop_sleep_no_spin()` to save battery
-            app_state.loop_helper.loop_start();
+            app_state.last_frame_time = std::time::Instant::now();
+            
         },
         Event::LoopDestroyed => {
             app.cleanup()?;
