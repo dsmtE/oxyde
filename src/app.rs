@@ -110,6 +110,7 @@ impl Default for RenderingConfig {
 pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config: RenderingConfig) -> Result<()> {
     let event_loop = EventLoop::new();
 
+    #[allow(unused_mut)]
     let mut window_builder: WindowBuilder = WindowBuilder::new()
         .with_decorations(true)
         .with_resizable(app_config.is_resizable)
