@@ -1,30 +1,30 @@
-use std::iter;
-
+use std::sync::Arc;
 use winit::{
-    event::{self, ElementState, Event, MouseButton, VirtualKeyCode, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    event::{self, ElementState, Event, MouseButton, WindowEvent},
+    keyboard,
+    event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
+    window::{Window, WindowBuilder},
 };
 
 use anyhow::Result;
 
 use crate::{
-    gui_render_wgpu::{Gui, GuiRenderWgpu, ScreenDescriptor},
+    egui_wgpu_renderer::EguiRenderer,
     input::{InputsState, SystemState, WinitEventHandler},
 };
 
+use egui_wgpu::ScreenDescriptor;
 
 pub struct AppState {
-    pub window: winit::window::Window,
+    pub window: std::sync::Arc<Window>,
 
-    pub surface: wgpu::Surface,
+    pub surface: wgpu::Surface<'static>,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub clear_color: wgpu::Color,
 
-    pub gui: Gui,
-    pub gui_render: GuiRenderWgpu,
+    pub egui_renderer: EguiRenderer,
 
     pub input_state: InputsState,
     pub system_state: SystemState,
@@ -51,18 +51,18 @@ pub trait App {
 
     fn update(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
-    fn render_gui(&mut self, _app_state: &mut AppState, _ctx: &egui::Context) -> Result<()> { Ok(()) }
+    fn render_gui(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
-    fn render(&mut self, _app_state: &mut AppState, _output_view: &wgpu::TextureView) -> Result<(), wgpu::SurfaceError> { Ok(()) }
+    fn render(&mut self, _app_state: &mut AppState, _output_view: &wgpu::TextureView) -> Result<()> { Ok(()) }
     // fn called after queue submit
     fn post_render(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
     fn cleanup(&mut self) -> Result<()> { Ok(()) }
 
     fn on_mouse(&mut self, _app_state: &mut AppState, _button: &MouseButton, _button_state: &ElementState) -> Result<()> { Ok(()) }
-    fn on_key(&mut self, _app_state: &mut AppState, _input: event::KeyboardInput) -> Result<()> { Ok(()) }
+    fn on_key(&mut self, _app_state: &mut AppState, _event: &event::KeyEvent) -> Result<()> { Ok(()) }
 
-    fn handle_event(&mut self, _app_state: &mut AppState, _event: &Event<()>) -> Result<()> { Ok(()) }
+    fn handle_event<T: 'static>(&mut self, _app_state: &mut AppState, _event: &Event<T>) -> Result<()> { Ok(()) }
 }
 
 pub struct AppConfig {
@@ -108,7 +108,8 @@ impl Default for RenderingConfig {
 }
 
 pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config: RenderingConfig) -> Result<()> {
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new()?;
+    event_loop.set_control_flow(ControlFlow::Poll);
 
     #[allow(unused_mut)]
     let mut window_builder: WindowBuilder = WindowBuilder::new()
@@ -130,7 +131,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     //     window_builder = window_builder.with_inner_size(PhysicalSize::new(width, height));
     // }
 
-    let window = window_builder.build(&event_loop)?;
+    let window = Arc::new(window_builder.build(&event_loop)?);
 
     let window_dimensions = window.inner_size();
 
@@ -139,7 +140,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         backends: rendering_config.backend,
         ..Default::default()
     });
-    let surface = unsafe { instance.create_surface(&window) }.unwrap();
+    let surface =  instance.create_surface(window.clone()).unwrap();
 
     let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: rendering_config.power_preference,
@@ -151,8 +152,8 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     let (device, queue) = pollster::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
             label: None,
-            features: rendering_config.device_features,
-            limits: rendering_config.device_limits,
+            required_features: rendering_config.device_features,
+            required_limits: rendering_config.device_limits,
         },
         None,
     ))?;
@@ -167,17 +168,12 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         present_mode: rendering_config.window_surface_present_mode,
         alpha_mode: wgpu::CompositeAlphaMode::default(),
         view_formats: vec![],
+        desired_maximum_frame_latency: 2,
     };
 
     surface.configure(&device, &config);
 
-    let gui = Gui::new(ScreenDescriptor {
-        physical_width: window_dimensions.width,
-        physical_height: window_dimensions.height,
-        scale_factor: window.scale_factor() as f32,
-    });
-
-    let gui_render = GuiRenderWgpu::new(&device, config.format, 1);
+    let egui_renderer = EguiRenderer::new(&device, config.format, None, 1, &window);
 
     let mut app_state = AppState {
         window,
@@ -188,8 +184,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         config,
         clear_color: wgpu::Color { r: 0.1, g: 0.2, b: 0.3, a: 1.0 },
 
-        gui,
-        gui_render,
+        egui_renderer,
 
         input_state: InputsState::default(),
         system_state: SystemState::new(window_dimensions),
@@ -214,19 +209,23 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     }
 
     // Run
-    event_loop.run(move |event, _, control_flow| {
-        if let Err(error) = run_loop(&mut app, &mut app_state, event, control_flow) {
+    event_loop.run(move |event, elwt| {
+        if let Err(error) = run_loop(&mut app, &mut app_state, event, elwt) {
             eprintln!("Application Error: {}", error);
         }
-    });
+    })?;
+
+    Ok(())
 }
 
-fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, control_flow: &mut ControlFlow) -> Result<()> {
-    *control_flow = app_state.control_flow;
-
+fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Event<T>, elwt: &EventLoopWindowTarget<T>) -> Result<()> {
     app_state.input_state.handle_event(&event);
     app_state.system_state.handle_event(&event);
-    app_state.gui.handle_event(&event);
+
+    if let Event::WindowEvent { event: window_event, .. } = &event {
+        let _ = app_state.egui_renderer.handle_window_event(&app_state.window, &window_event);
+    }
+
     app.handle_event(app_state, &event)?;
 
     match event {
@@ -239,52 +238,45 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
                 app_state.config.height = physical_size.height;
                 if physical_size.width > 0 && physical_size.height > 0 {
                     app_state.surface.configure(&app_state.device, &app_state.config);
+                    // On macos the window needs to be redrawn manually after resizing
+                    app_state.window.request_redraw();
                 }
             },
             WindowEvent::CloseRequested
             | WindowEvent::KeyboardInput {
-                input:
-                    event::KeyboardInput {
+                event:
+                    event::KeyEvent {
                         state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
+                        physical_key: keyboard::PhysicalKey::Code(keyboard::KeyCode::Escape),
                         ..
                     },
                 ..
-            } => *control_flow = ControlFlow::Exit,
+            } => {
+                elwt.exit();
+            },
             WindowEvent::MouseInput { button, state, .. } => app.on_mouse(app_state, button, state)?,
-            WindowEvent::KeyboardInput { input, .. } => {
-                app.on_key(app_state, *input)?;
+            WindowEvent::KeyboardInput { event, .. } => {
+                app.on_key(app_state, event)?;
+            },
+            WindowEvent::RedrawRequested => {
+                match app_state.surface.get_current_texture() {
+                    Ok(output) => {
+                        render_app(app, app_state, output)?;
+                    },
+                    // TODO: Reconfigure the surface if lost
+                    // Err(wgpu::SurfaceError::Lost) => { }
+                    // The system is out of memory, we should probably quit
+                    Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
+                    // All other errors (Outdated, Timeout) should be resolved by the next frame
+                    Err(e) => eprintln!("{:?}", e),
+                }
+    
+                app.post_render(app_state)?;
             },
             _ => (),
         },
-        Event::RedrawRequested(_) => {
-            // TODO move that
-            // TODO: fix render method here by calling sub app render features
-            let full_output = {
-                app_state.gui.start_frame(app_state.window.scale_factor() as _);
-                app.render_gui(app_state, &app_state.gui.context())?;
-                app_state.gui.end_frame(&app_state.window)
-            };
-
-            match render_app(app, app_state, full_output) {
-                Ok(_) => {},
-                // TODO: Reconfigure the surface if lost
-                // Err(wgpu::SurfaceError::Lost) => { }
-                // The system is out of memory, we should probably quit
-                Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                // All other errors (Outdated, Timeout) should be resolved by the next frame
-                Err(e) => eprintln!("{:?}", e),
-            }
-
-            app.post_render(app_state)?;
-        },
-        Event::MainEventsCleared => {
+        Event::AboutToWait => {
             app.update(app_state)?;
-
-            // RedrawRequested will only trigger once, unless we manually
-            // request it.
-            // window.request_redraw();
-            app_state.window.request_redraw();
 
             let now = std::time::Instant::now();
             let next_frame_time = app_state.last_frame_time + app_state.target_frame_duration;
@@ -300,8 +292,9 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
             }
             app_state.last_frame_time = std::time::Instant::now();
             
+            app_state.window.request_redraw();
         },
-        Event::LoopDestroyed => {
+        Event::LoopExiting => {
             app.cleanup()?;
         },
         _ => (),
@@ -310,25 +303,28 @@ fn run_loop(app: &mut impl App, app_state: &mut AppState, event: Event<()>, cont
     Ok(())
 }
 
-pub fn render_app(app: &mut impl App, app_state: &mut AppState, gui_output: egui::FullOutput) -> Result<(), wgpu::SurfaceError> {
-    let output: wgpu::SurfaceTexture = app_state.surface.get_current_texture()?;
+pub fn render_app(app: &mut impl App, app_state: &mut AppState, output: wgpu::SurfaceTexture) -> Result<()> {
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
     app.render(app_state, &view)?;
 
     // draw UI
-    let window_dimensions = app_state.window.inner_size();
+    app_state.egui_renderer.begin_frame(&app_state.window);
+    app.render_gui(app_state)?;
+    let egui_output = app_state.egui_renderer.end_frame();
+
+    // let window_dimensions = app_state.window.inner_size();
+
+    let output_size = output.texture.size();
 
     let screen_descriptor = ScreenDescriptor {
-        physical_width: window_dimensions.width,
-        physical_height: window_dimensions.height,
-        scale_factor: app_state.window.scale_factor() as f32,
-    };
+        size_in_pixels: [output_size.width, output_size.height],
+        pixels_per_point: app_state.window.scale_factor() as f32,
 
-    app_state
-        .gui_render
-        .render(app_state.gui.context(), &app_state.device, &app_state.queue, &screen_descriptor, &view, gui_output)
-        .expect("Failed to execute gui render pass!");
+    };
+    let mut egui_encoder = app_state.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
+    app_state.egui_renderer.draw_output(egui_output, &app_state.device, &app_state.queue, &mut egui_encoder, &app_state.window, &view, screen_descriptor);
+    app_state.queue.submit(Some(egui_encoder.finish()));
 
     output.present();
 
@@ -339,7 +335,7 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, gui_output: egui
 pub fn fit_viewport_to_gui_available_rect(render_pass: &mut wgpu::RenderPass, _app_state: &AppState) {
     let window_scale_factor = _app_state.window.scale_factor() as f32;
     // // It must be multiplied by window scale factor as render pass use physical pixels screen size
-    let available_rect = _app_state.gui.available_rect;
+    let available_rect = _app_state.egui_renderer.context().available_rect();
     let available_rect_size = available_rect.size();
 
     render_pass.set_viewport(
