@@ -3,16 +3,17 @@ use std::time::Instant;
 use winit::{
     dpi::PhysicalSize,
     event::{self, ElementState, Event, MouseButton, MouseScrollDelta, WindowEvent},
+    keyboard,
 };
 
 pub struct InputsState {
-    pub scancode_states: [bool; 1024],
+    pub keycode_states: [bool; 1024],
     pub mouse: MouseState,
 }
 impl Default for InputsState {
     fn default() -> Self {
         Self {
-            scancode_states: [false; 1024],
+            keycode_states: [false; 1024],
             mouse: MouseState::default(),
         }
     }
@@ -23,20 +24,25 @@ pub trait WinitEventHandler {
 }
 
 impl InputsState {
-    pub fn is_key_pressed(&self, scancode: u32) -> bool { self.scancode_states[scancode as usize] }
+    pub fn is_key_pressed(&self, keycode: keyboard::KeyCode) -> bool { self.keycode_states[keycode as usize] }
 }
 
 impl WinitEventHandler for InputsState {
     fn handle_event<T>(&mut self, event: &Event<T>) {
-        if let Event::WindowEvent { event: window_event, .. } = event {
-            if let WindowEvent::KeyboardInput {
-                input: event::KeyboardInput { scancode, state, virtual_keycode, .. },
+        if let Event::WindowEvent {
+            event: WindowEvent::KeyboardInput {
+                event: event::KeyEvent {
+                    physical_key: keyboard::PhysicalKey::Code(keycode),
+                    state,
+                    logical_key ,
+                    ..
+                },
                 ..
-            } = *window_event
-            {
-                self.scancode_states[scancode as usize] = state == ElementState::Pressed;
-                trace!("{:?} pressed corresponding to the scancode {} (state: {:?})", virtual_keycode, scancode, state);
-            }
+            },
+            ..
+        } = event {
+            self.keycode_states[*keycode as usize] = *state == ElementState::Pressed;
+            trace!("{:?} pressed corresponding to the keycode {:?} (state: {:?})", logical_key, keycode, state);
         }
 
         self.mouse.handle_event(event);

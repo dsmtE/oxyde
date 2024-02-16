@@ -1,5 +1,5 @@
 mod app;
-mod gui_render_wgpu;
+mod egui_wgpu_renderer;
 mod input;
 pub mod wgpu_utils;
 
