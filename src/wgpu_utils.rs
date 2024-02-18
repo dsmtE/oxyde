@@ -7,7 +7,6 @@ mod ping_pong_texture;
 #[cfg(feature = "glsl")]
 pub mod shaders_glsl;
 
-
 pub mod uniform_buffer;
 
 pub use ping_pong_buffer::PingPongBuffer;
