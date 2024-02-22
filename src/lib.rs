@@ -13,5 +13,12 @@ pub extern crate bytemuck;
 
 pub extern crate anyhow;
 
+#[cfg(feature = "log")]
 #[macro_use]
-extern crate log;
+pub extern crate log;
+
+#[cfg(feature = "log")]
+mod logging;
+
+#[cfg(feature = "log")]
+pub use logging::*;

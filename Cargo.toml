@@ -7,16 +7,19 @@ edition = "2021"
 [features]
 glsl = ["dep:shaderc"]
 icon = ["dep:image"]
+log = ["dep:log", "dep:fern", "dep:chrono"]
 
 [dependencies]
 winit = "0.29"
 
-log = "0.4"
+anyhow = "1"
+log = {version = "0.4", optional = true }
+fern = { version = "0.6", features = [ "colored" ], optional = true }
+chrono = { version = "0.4", optional = true }
 
 wgpu = { version = "0.19", features = [ "spirv" ] }
 pollster = "0.3"
 bytemuck = { version = "1.13", features = [ "derive" ] }
-anyhow = "1"
 
 egui = "0.26.2"
 egui-wgpu = "0.26.2"
