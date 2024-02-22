@@ -109,34 +109,46 @@ pub struct StagingBufferWrapper<T: bytemuck::Pod, const READ_OR_WRITE: bool> {
     staging_buffer: Buffer,
 }
 
-pub fn create_staging_buffer(device: &Device, read_or_write: bool, size: BufferAddress) -> Buffer {
+pub fn create_buffer_for_size(device: &Device, usage: BufferUsages, label: Option<&str>, size: BufferAddress) -> Buffer {
     device.create_buffer(&BufferDescriptor {
-        label: None,
+        label,
         size,
-        usage: BufferUsages::COPY_DST
-            | match read_or_write {
-                true => BufferUsages::MAP_READ,
-                false => BufferUsages::COPY_SRC,
-            },
+        usage,
         mapped_at_creation: false,
     })
 }
 
+pub fn create_buffer_from_content(device: &Device, usage: BufferUsages, label: Option<&str>, content: Option<&[u8]>) -> Buffer {
+    wgpu::util::DeviceExt::create_buffer_init(
+        device,
+        &wgpu::util::BufferInitDescriptor {
+            label,
+            contents: content.unwrap_or(&[0u8; 0]),
+            usage,
+        },
+    )
+}
+
 impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> StagingBufferWrapper<T, READ_OR_WRITE> {
     pub fn new(device: &Device, size: usize) -> Self {
-        let buffer_size = (size * size_of::<T>()) as BufferAddress;
+        let usages =  BufferUsages::COPY_DST | match READ_OR_WRITE {
+            true => BufferUsages::MAP_READ,
+            false => BufferUsages::COPY_SRC,
+        };
         Self {
             values: vec![T::zeroed(); size],
-            staging_buffer: create_staging_buffer(device, READ_OR_WRITE, buffer_size),
+            staging_buffer: create_buffer_for_size(device, usages, None, (size * std::mem::size_of::<T>()) as BufferAddress),
         }
     }
 
     pub fn new_from_data(device: &Device, slice_content: &[T]) -> Self {
-        let size = slice_content.len();
-        let buffer_size = (size * size_of::<T>()) as BufferAddress;
+        let usages =  BufferUsages::COPY_DST | match READ_OR_WRITE {
+            true => BufferUsages::MAP_READ,
+            false => BufferUsages::COPY_SRC,
+        };
         Self {
             values: Vec::from(slice_content),
-            staging_buffer: create_staging_buffer(device, READ_OR_WRITE, buffer_size),
+            staging_buffer: create_buffer_from_content(device, usages, None, Some(bytemuck::cast_slice(slice_content))),
         }
     }
 
@@ -153,8 +165,17 @@ impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> StagingBufferWrapper<T, READ_O
     pub fn encode_read(&mut self, command_encoder: &mut CommandEncoder, buffer: &Buffer) {
         command_encoder.copy_buffer_to_buffer(buffer, 0, &self.staging_buffer, 0, self.bytes_size() as BufferAddress);
     }
-
-    pub fn map_buffer(&mut self) { self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {}); }
+    
+    pub fn map_buffer(
+        &mut self,
+        callback: Option<impl FnOnce(Result<(), wgpu::BufferAsyncError>) + wgpu::WasmNotSend + 'static>
+    ) {
+        if callback.is_none() {
+            self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+        } else {
+            self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, callback.unwrap());
+        }
+    }
 
     pub fn read_and_unmap_buffer(&mut self) {
         let bytes_size = self.bytes_size();
