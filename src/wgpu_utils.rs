@@ -7,7 +7,11 @@ mod ping_pong_texture;
 #[cfg(feature = "glsl")]
 pub mod shaders_glsl;
 
-pub mod wgsl_preprocessor;
+
+#[cfg(feature = "naga")]
+mod shader_composer;
+#[cfg(feature = "naga")]
+pub use shader_composer::ShaderComposer;
 
 pub mod uniform_buffer;
 
