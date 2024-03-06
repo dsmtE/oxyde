@@ -67,12 +67,29 @@ impl ShaderComposer {
             ..Default::default()
         })
         .map(|_| ())
-
     }
 
-    pub fn add_shader_define(mut self, name: &str, value: ShaderDefValue) -> Self {
-        self.defines.insert(name.to_string(), value.into());
+    pub fn with_shader_define(mut self, name: &str, value: ShaderDefValue) -> Self {
+        self.add_shader_define(name, value);
         self
+    }
+
+    pub fn defines(&self) -> &HashMap<String, compose::ShaderDefValue> {
+        &self.defines
+    }
+
+    pub fn add_shader_define(&mut self, name: &str, value: ShaderDefValue) {
+        self.defines.insert(name.to_string(), value.into());
+    }
+
+    pub fn build_ref(&mut self) -> Result<wgpu::naga::Module, ComposerError> {
+        self.composer
+            .make_naga_module(NagaModuleDescriptor {
+                source: self.source,
+                file_path: self.name.unwrap_or("unknown"),
+                shader_defs: self.defines.clone(),
+                ..Default::default()
+            })
     }
 
     pub fn build(mut self) -> Result<wgpu::naga::Module, ComposerError> {
