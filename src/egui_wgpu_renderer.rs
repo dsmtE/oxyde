@@ -1,9 +1,8 @@
 use egui::Context;
 use egui_wgpu::{Renderer, ScreenDescriptor};
-use egui_winit::{State, EventResponse};
+use egui_winit::{EventResponse, State};
 use wgpu::{CommandEncoder, Device, Queue, TextureFormat, TextureView};
-use winit::event::WindowEvent;
-use winit::window::Window;
+use winit::{event::WindowEvent, window::Window};
 
 pub struct EguiRenderer {
     state: State,
@@ -21,12 +20,7 @@ impl EguiRenderer {
         let egui_context = Context::default();
         let viewport_id = egui_context.viewport_id();
         let egui_state = egui_winit::State::new(egui_context, viewport_id, &window, Some(window.scale_factor() as f32), None);
-        let egui_renderer = Renderer::new(
-            device,
-            output_color_format,
-            output_depth_format,
-            msaa_samples,
-        );
+        let egui_renderer = Renderer::new(device, output_color_format, output_depth_format, msaa_samples);
 
         EguiRenderer {
             state: egui_state,
@@ -34,13 +28,9 @@ impl EguiRenderer {
         }
     }
 
-    pub fn handle_window_event(&mut self, window: &Window, event: &WindowEvent) -> EventResponse {
-        self.state.on_window_event(window, event)
-    }
+    pub fn handle_window_event(&mut self, window: &Window, event: &WindowEvent) -> EventResponse { self.state.on_window_event(window, event) }
 
-    pub fn context(&self) -> &Context {
-        self.state.egui_ctx()
-    }
+    pub fn context(&self) -> &Context { self.state.egui_ctx() }
 
     #[allow(clippy::too_many_arguments)]
     pub fn draw_ui(
@@ -58,15 +48,7 @@ impl EguiRenderer {
             run_ui(ui);
         });
 
-        self.draw_output(
-            full_output,
-            device,
-            queue,
-            encoder,
-            window,
-            window_surface_view,
-            screen_descriptor,
-        );
+        self.draw_output(full_output, device, queue, encoder, window, window_surface_view, screen_descriptor);
     }
 
     pub fn begin_frame(&mut self, window: &Window) {
@@ -74,10 +56,8 @@ impl EguiRenderer {
         self.context().begin_frame(raw_input);
     }
 
-    pub fn end_frame(&mut self) -> egui::FullOutput {
-        self.context().end_frame()
-    }
-    
+    pub fn end_frame(&mut self) -> egui::FullOutput { self.context().end_frame() }
+
     #[allow(clippy::too_many_arguments)]
     pub fn draw_output(
         &mut self,
@@ -115,5 +95,4 @@ impl EguiRenderer {
             self.renderer.free_texture(x)
         }
     }
-
 }

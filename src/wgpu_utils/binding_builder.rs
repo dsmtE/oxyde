@@ -10,9 +10,7 @@ pub struct BindGroupLayoutBuilder {
 }
 
 impl BindGroupLayoutBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
+    pub fn new() -> Self { Self::default() }
 
     pub fn add_raw_binding(mut self, binding: wgpu::BindGroupLayoutEntry) -> Self {
         self.next_binding_index = binding.binding + 1;

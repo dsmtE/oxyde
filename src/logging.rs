@@ -16,7 +16,10 @@ pub fn color_formatter(out: fern::FormatCallback, message: &std::fmt::Arguments,
     out.finish(format_args!(
         "{color}{message}{color_reset}",
         message = message,
-        color = format_args!("\x1B[{color_number}m", color_number = fern::colors::ColoredLevelConfig::new().get_color(&record.level()).to_fg_str()),
+        color = format_args!(
+            "\x1B[{color_number}m",
+            color_number = fern::colors::ColoredLevelConfig::new().get_color(&record.level()).to_fg_str()
+        ),
         color_reset = "\x1B[0m",
     ))
 }

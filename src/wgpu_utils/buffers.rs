@@ -28,10 +28,11 @@ pub fn create_buffer_from_content(device: &Device, usage: BufferUsages, label: O
 
 impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> StagingBufferWrapper<T, READ_OR_WRITE> {
     pub fn new(device: &Device, size: usize) -> Self {
-        let usages =  BufferUsages::COPY_DST | match READ_OR_WRITE {
-            true => BufferUsages::MAP_READ,
-            false => BufferUsages::COPY_SRC,
-        };
+        let usages = BufferUsages::COPY_DST
+            | match READ_OR_WRITE {
+                true => BufferUsages::MAP_READ,
+                false => BufferUsages::COPY_SRC,
+            };
         Self {
             values: vec![T::zeroed(); size],
             staging_buffer: create_buffer_for_size(device, usages, None, (size * std::mem::size_of::<T>()) as BufferAddress),
@@ -39,10 +40,11 @@ impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> StagingBufferWrapper<T, READ_O
     }
 
     pub fn new_from_data(device: &Device, slice_content: &[T]) -> Self {
-        let usages =  BufferUsages::COPY_DST | match READ_OR_WRITE {
-            true => BufferUsages::MAP_READ,
-            false => BufferUsages::COPY_SRC,
-        };
+        let usages = BufferUsages::COPY_DST
+            | match READ_OR_WRITE {
+                true => BufferUsages::MAP_READ,
+                false => BufferUsages::COPY_SRC,
+            };
         Self {
             values: Vec::from(slice_content),
             staging_buffer: create_buffer_from_content(device, usages, None, Some(bytemuck::cast_slice(slice_content))),
@@ -62,12 +64,8 @@ impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> StagingBufferWrapper<T, READ_O
     pub fn encode_read(&mut self, command_encoder: &mut CommandEncoder, buffer: &Buffer) {
         command_encoder.copy_buffer_to_buffer(buffer, 0, &self.staging_buffer, 0, self.bytes_size() as BufferAddress);
     }
-    
-    pub fn map_buffer(
-        &mut self,
-        callback: Option<impl FnOnce(Result<(), wgpu::BufferAsyncError>) + wgpu::WasmNotSend + 'static>
-    ) {
 
+    pub fn map_buffer(&mut self, callback: Option<impl FnOnce(Result<(), wgpu::BufferAsyncError>) + wgpu::WasmNotSend + 'static>) {
         if let Some(callback) = callback {
             self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, callback);
         } else {

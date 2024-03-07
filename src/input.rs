@@ -30,17 +30,20 @@ impl InputsState {
 impl WinitEventHandler for InputsState {
     fn handle_event<T>(&mut self, event: &Event<T>) {
         if let Event::WindowEvent {
-            event: WindowEvent::KeyboardInput {
-                event: event::KeyEvent {
-                    physical_key: keyboard::PhysicalKey::Code(keycode),
-                    state,
-                    logical_key ,
+            event:
+                WindowEvent::KeyboardInput {
+                    event:
+                        event::KeyEvent {
+                            physical_key: keyboard::PhysicalKey::Code(keycode),
+                            state,
+                            logical_key,
+                            ..
+                        },
                     ..
                 },
-                ..
-            },
             ..
-        } = event {
+        } = event
+        {
             self.keycode_states[*keycode as usize] = *state == ElementState::Pressed;
             trace!("{:?} pressed corresponding to the keycode {:?} (state: {:?})", logical_key, keycode, state);
         }

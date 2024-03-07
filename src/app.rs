@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use winit::{
     event::{self, ElementState, Event, MouseButton, WindowEvent},
-    keyboard,
     event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
+    keyboard,
     window::{Window, WindowBuilder},
 };
 
@@ -41,9 +41,7 @@ impl AppState {
             .set_fullscreen(Some(winit::window::Fullscreen::Borderless(self.window.primary_monitor())));
     }
 
-    pub fn set_target_fps(&mut self, fps: u32) {
-        self.target_frame_duration = std::time::Duration::from_micros((1_000_000.0 / fps as f32) as u64);
-    }
+    pub fn set_target_fps(&mut self, fps: u32) { self.target_frame_duration = std::time::Duration::from_micros((1_000_000.0 / fps as f32) as u64); }
 }
 
 pub trait App {
@@ -140,7 +138,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         backends: rendering_config.backend,
         ..Default::default()
     });
-    let surface =  instance.create_surface(window.clone()).unwrap();
+    let surface = instance.create_surface(window.clone()).unwrap();
 
     let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: rendering_config.power_preference,
@@ -190,7 +188,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
         system_state: SystemState::new(window_dimensions),
 
         control_flow: app_config.control_flow,
-        
+
         last_frame_time: std::time::Instant::now(),
         target_frame_duration: std::time::Duration::from_micros(16_666),
     };
@@ -270,7 +268,7 @@ fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Eve
                     // All other errors (Outdated, Timeout) should be resolved by the next frame
                     Err(e) => eprintln!("{:?}", e),
                 }
-    
+
                 app.post_render(app_state)?;
             },
             _ => (),
@@ -291,7 +289,7 @@ fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Eve
                 spin_sleep::sleep(next_frame_time.duration_since(now));
             }
             app_state.last_frame_time = std::time::Instant::now();
-            
+
             app_state.window.request_redraw();
         },
         Event::LoopExiting => {
@@ -320,10 +318,19 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, output: wgpu::Su
     let screen_descriptor = ScreenDescriptor {
         size_in_pixels: [output_size.width, output_size.height],
         pixels_per_point: app_state.window.scale_factor() as f32,
-
     };
-    let mut egui_encoder = app_state.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
-    app_state.egui_renderer.draw_output(egui_output, &app_state.device, &app_state.queue, &mut egui_encoder, &app_state.window, &view, screen_descriptor);
+    let mut egui_encoder = app_state
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
+    app_state.egui_renderer.draw_output(
+        egui_output,
+        &app_state.device,
+        &app_state.queue,
+        &mut egui_encoder,
+        &app_state.window,
+        &view,
+        screen_descriptor,
+    );
     app_state.queue.submit(Some(egui_encoder.finish()));
 
     output.present();

@@ -7,7 +7,6 @@ mod ping_pong_texture;
 #[cfg(feature = "glsl")]
 pub mod shaders_glsl;
 
-
 #[cfg(feature = "naga")]
 mod shader_composer;
 #[cfg(feature = "naga")]
