@@ -45,7 +45,8 @@ impl WinitEventHandler for InputsState {
         } = event
         {
             self.keycode_states[*keycode as usize] = *state == ElementState::Pressed;
-            trace!("{:?} pressed corresponding to the keycode {:?} (state: {:?})", logical_key, keycode, state);
+            #[cfg(feature = "log")]
+            log::trace!("{:?} pressed corresponding to the keycode {:?} (state: {:?})", logical_key, keycode, state);
         }
 
         self.mouse.handle_event(event);

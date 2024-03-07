@@ -279,12 +279,14 @@ fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Eve
             let now = std::time::Instant::now();
             let next_frame_time = app_state.last_frame_time + app_state.target_frame_duration;
             if now > next_frame_time {
+                #[cfg(feature = "log")]
                 log::warn!(
                     "We are running behind the target frame rate of {:.0} fps (current frame took {:?} (~ {:.0} fps ))",
                     1.0 / app_state.target_frame_duration.as_secs_f32(),
                     now - app_state.last_frame_time,
                     1.0 / (now - app_state.last_frame_time).as_secs_f32()
                 );
+                
             } else {
                 spin_sleep::sleep(next_frame_time.duration_since(now));
             }
