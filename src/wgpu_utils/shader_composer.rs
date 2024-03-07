@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use naga_oil::compose::{self, ComposableModuleDescriptor, Composer, ComposerError, NagaModuleDescriptor};
 
-use wgpu;
-
 use anyhow::Result;
 
 // TODO: use macro to generate this enum and conversion
@@ -20,9 +18,9 @@ impl From<bool> for ShaderDefValue { fn from(b: bool) -> ShaderDefValue { Shader
 impl From<i32> for ShaderDefValue { fn from(i: i32) -> ShaderDefValue { ShaderDefValue::Int(i) } }
 impl From<u32> for ShaderDefValue { fn from(u: u32) -> ShaderDefValue { ShaderDefValue::UInt(u) } }
 
-impl Into<compose::ShaderDefValue> for ShaderDefValue {
-    fn into(self) -> compose::ShaderDefValue {
-        match self {
+impl From<ShaderDefValue> for compose::ShaderDefValue {
+    fn from(value: ShaderDefValue) -> compose::ShaderDefValue {
+        match value {
             ShaderDefValue::Bool(b) => compose::ShaderDefValue::Bool(b),
             ShaderDefValue::Int(i) => compose::ShaderDefValue::Int(i),
             ShaderDefValue::UInt(u) => compose::ShaderDefValue::UInt(u),
@@ -47,7 +45,7 @@ impl ShaderComposer {
         }
     }
 
-    pub fn add_module_read_from_path<'a>(&mut self, mut path: std::borrow::Cow<PathBuf>) ->  Result<()> {
+    pub fn add_module_read_from_path(&mut self, mut path: std::borrow::Cow<PathBuf>) ->  Result<()> {
         if !path.is_absolute() {
             *path.to_mut() = std::env::current_dir()?.join(path.as_ref());
         }

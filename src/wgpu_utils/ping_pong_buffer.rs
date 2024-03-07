@@ -1,6 +1,6 @@
 use super::binding_builder::{BindGroupBuilder, BindGroupLayoutBuilder, BindGroupLayoutWithDesc};
 
-use wgpu::{self, BindGroupLayout};
+use wgpu::BindGroupLayout;
 
 pub struct PingPongBuffer {
     ping_buffer: wgpu::Buffer,

@@ -223,7 +223,7 @@ fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Eve
     app_state.system_state.handle_event(&event);
 
     if let Event::WindowEvent { event: window_event, .. } = &event {
-        let _ = app_state.egui_renderer.handle_window_event(&app_state.window, &window_event);
+        let _ = app_state.egui_renderer.handle_window_event(&app_state.window, window_event);
     }
 
     app.handle_event(app_state, &event)?;

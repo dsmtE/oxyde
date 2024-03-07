@@ -67,10 +67,11 @@ impl<T: bytemuck::Pod, const READ_OR_WRITE: bool> StagingBufferWrapper<T, READ_O
         &mut self,
         callback: Option<impl FnOnce(Result<(), wgpu::BufferAsyncError>) + wgpu::WasmNotSend + 'static>
     ) {
-        if callback.is_none() {
-            self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+
+        if let Some(callback) = callback {
+            self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, callback);
         } else {
-            self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, callback.unwrap());
+            self.staging_buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {});
         }
     }
 

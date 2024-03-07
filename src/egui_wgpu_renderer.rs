@@ -39,9 +39,10 @@ impl EguiRenderer {
     }
 
     pub fn context(&self) -> &Context {
-        &self.state.egui_ctx()
+        self.state.egui_ctx()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_ui(
         &mut self,
         device: &Device,
@@ -76,7 +77,8 @@ impl EguiRenderer {
     pub fn end_frame(&mut self) -> egui::FullOutput {
         self.context().end_frame()
     }
-
+    
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_output(
         &mut self,
         full_output: egui::FullOutput,
@@ -87,18 +89,18 @@ impl EguiRenderer {
         window_surface_view: &TextureView,
         screen_descriptor: ScreenDescriptor,
     ) {
-        self.state.handle_platform_output(&window, full_output.platform_output);
+        self.state.handle_platform_output(window, full_output.platform_output);
 
         let tris = self.context().tessellate(full_output.shapes, full_output.pixels_per_point);
         for (id, image_delta) in &full_output.textures_delta.set {
-            self.renderer.update_texture(&device, &queue, *id, &image_delta);
+            self.renderer.update_texture(device, queue, *id, image_delta);
         }
-        self.renderer.update_buffers(&device, &queue, encoder, &tris, &screen_descriptor);
+        self.renderer.update_buffers(device, queue, encoder, &tris, &screen_descriptor);
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("egui main render pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &window_surface_view,
+                    view: window_surface_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Load,

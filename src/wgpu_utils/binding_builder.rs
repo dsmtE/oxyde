@@ -3,6 +3,7 @@ pub struct BindGroupLayoutWithDesc {
     pub entries: Vec<wgpu::BindGroupLayoutEntry>,
 }
 
+#[derive(Default)]
 pub struct BindGroupLayoutBuilder {
     entries: Vec<wgpu::BindGroupLayoutEntry>,
     next_binding_index: u32,
@@ -10,10 +11,7 @@ pub struct BindGroupLayoutBuilder {
 
 impl BindGroupLayoutBuilder {
     pub fn new() -> Self {
-        BindGroupLayoutBuilder {
-            entries: Vec::new(),
-            next_binding_index: 0,
-        }
+        Self::default()
     }
 
     pub fn add_raw_binding(mut self, binding: wgpu::BindGroupLayoutEntry) -> Self {
