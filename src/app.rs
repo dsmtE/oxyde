@@ -11,6 +11,7 @@ use anyhow::Result;
 use crate::{
     egui_wgpu_renderer::EguiRenderer,
     input::{InputsState, SystemState, WinitEventHandler},
+    wgpu_utils::render_handles::{RenderInstance, SurfaceHandle, DeviceHandle},
 };
 
 use egui_wgpu::ScreenDescriptor;
@@ -18,10 +19,9 @@ use egui_wgpu::ScreenDescriptor;
 pub struct AppState {
     pub window: std::sync::Arc<Window>,
 
-    pub surface: wgpu::Surface<'static>,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
-    pub config: wgpu::SurfaceConfiguration,
+    pub render_instance: RenderInstance,
+    pub surface_handle: SurfaceHandle<'static>,
+
     pub clear_color: wgpu::Color,
 
     pub egui_renderer: EguiRenderer,
@@ -133,53 +133,28 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
 
     let window_dimensions = window.inner_size();
 
-    // TODO : encapsulate renderer initialisation
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: rendering_config.backend,
-        ..Default::default()
-    });
-    let surface = instance.create_surface(window.clone()).unwrap();
 
-    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: rendering_config.power_preference,
-        compatible_surface: Some(&surface),
-        force_fallback_adapter: false,
-    }))
-    .unwrap();
-
-    let (device, queue) = pollster::block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            label: None,
-            required_features: rendering_config.device_features,
-            required_limits: rendering_config.device_limits,
-        },
+    let mut render_instance = RenderInstance::new(Some(rendering_config.backend), None);
+    let mut surface_handle = pollster::block_on(render_instance.create_render_surface(
+        window.clone(),
+        window_dimensions.width,
+        window_dimensions.height,
+        rendering_config.window_surface_present_mode,
         None,
     ))?;
-    // .ok_or(Err(anyhow::anyhow!("Unable to request device")));
-    let binding = surface.get_capabilities(&adapter);
-    let surface_format = binding.formats.first().unwrap();
-    let config = wgpu::SurfaceConfiguration {
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        format: *surface_format,
-        width: window_dimensions.width,
-        height: window_dimensions.height,
-        present_mode: rendering_config.window_surface_present_mode,
-        alpha_mode: wgpu::CompositeAlphaMode::default(),
-        view_formats: vec![],
-        desired_maximum_frame_latency: 2,
-    };
 
-    surface.configure(&device, &config);
+    let surface_device_handle = &render_instance.devices[surface_handle.device_handle_id];
+    
+    surface_handle.set_present_mode(&surface_device_handle.device, rendering_config.window_surface_present_mode);
 
-    let egui_renderer = EguiRenderer::new(&device, config.format, None, 1, &window);
+    let egui_renderer = EguiRenderer::new(&surface_device_handle.device, surface_handle.format(), None, 1, &window);
 
     let mut app_state = AppState {
         window,
 
-        surface,
-        device,
-        queue,
-        config,
+        render_instance,
+        surface_handle,
+
         clear_color: wgpu::Color { r: 0.1, g: 0.2, b: 0.3, a: 1.0 },
 
         egui_renderer,
@@ -194,13 +169,13 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     };
 
     let (tx, rx) = std::sync::mpsc::channel::<wgpu::Error>();
-    app_state.device.on_uncaptured_error(Box::new(move |e: wgpu::Error| {
+    app_state.render_instance.device_from_surface_handle(&app_state.surface_handle).device.on_uncaptured_error(Box::new(move |e: wgpu::Error| {
         tx.send(e).expect("sending error failed");
     }));
 
     let mut app = T::create(&mut app_state);
 
-    app_state.device.on_uncaptured_error(Box::new(|err| panic!("{}", err)));
+    app_state.render_instance.device_from_surface_handle(&app_state.surface_handle).device.on_uncaptured_error(Box::new(|err| panic!("{}", err)));
 
     if let Ok(err) = rx.try_recv() {
         panic!("{}", err);
@@ -232,10 +207,9 @@ fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Eve
                 // Resize with 0 width and height is used by winit to signal a minimize event on Windows.
                 // See: https://github.com/rust-windowing/winit/issues/208
                 // This solves an issue where the app would panic when minimizing on Windows.
-                app_state.config.width = physical_size.width;
-                app_state.config.height = physical_size.height;
                 if physical_size.width > 0 && physical_size.height > 0 {
-                    app_state.surface.configure(&app_state.device, &app_state.config);
+                    let surface_device = &app_state.render_instance.device_from_surface_handle(&app_state.surface_handle).device;
+                    app_state.surface_handle.resize(surface_device, physical_size.width, physical_size.height)?;
                     // On macos the window needs to be redrawn manually after resizing
                     app_state.window.request_redraw();
                 }
@@ -257,7 +231,7 @@ fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Eve
                 app.on_key(app_state, event)?;
             },
             WindowEvent::RedrawRequested => {
-                match app_state.surface.get_current_texture() {
+                match app_state.surface_handle.get_current_texture() {
                     Ok(output) => {
                         render_app(app, app_state, output)?;
                     },
@@ -321,19 +295,21 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, output: wgpu::Su
         size_in_pixels: [output_size.width, output_size.height],
         pixels_per_point: app_state.window.scale_factor() as f32,
     };
-    let mut egui_encoder = app_state
-        .device
+
+    let DeviceHandle { device: surface_device, queue: surface_queue, .. } = app_state.render_instance.device_from_surface_handle(&app_state.surface_handle);
+
+    let mut egui_encoder = surface_device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
     app_state.egui_renderer.draw_output(
         egui_output,
-        &app_state.device,
-        &app_state.queue,
+        surface_device,
+        surface_queue,
         &mut egui_encoder,
         &app_state.window,
         &view,
         screen_descriptor,
     );
-    app_state.queue.submit(Some(egui_encoder.finish()));
+    surface_queue.submit(Some(egui_encoder.finish()));
 
     output.present();
 
