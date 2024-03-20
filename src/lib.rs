@@ -13,7 +13,7 @@ pub mod egui_wgpu_renderer;
 
 #[cfg(feature = "egui")]
 pub extern crate egui;
-#[cfg(feature = "egui")]
+#[cfg(any(feature = "egui", feature = "application"))]
 pub extern crate winit;
 
 pub extern crate anyhow;
