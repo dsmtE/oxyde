@@ -1,14 +1,19 @@
+#[cfg(feature = "application")]
 mod app;
-mod egui_wgpu_renderer;
+#[cfg(feature = "application")]
 mod input;
 pub mod wgpu_utils;
 
-pub use app::*;
-pub use input::InputsState;
+pub extern crate wgpu;
 
 pub extern crate bytemuck;
+
+#[cfg(feature = "egui")]
+pub mod egui_wgpu_renderer;
+
+#[cfg(feature = "egui")]
 pub extern crate egui;
-pub extern crate wgpu;
+#[cfg(feature = "egui")]
 pub extern crate winit;
 
 pub extern crate anyhow;

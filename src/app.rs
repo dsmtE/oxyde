@@ -9,12 +9,15 @@ use winit::{
 use anyhow::Result;
 
 use crate::{
-    egui_wgpu_renderer::EguiRenderer,
     input::{InputsState, SystemState, WinitEventHandler},
-    wgpu_utils::render_handles::{RenderInstance, SurfaceHandle, DeviceHandle},
+    wgpu_utils::render_handles::{RenderInstance, SurfaceHandle},
 };
 
-use egui_wgpu::ScreenDescriptor;
+#[cfg(feature = "egui")]
+use crate::{
+    egui_wgpu_renderer::EguiRenderer,
+    wgpu_utils::render_handles::DeviceHandle,
+};
 
 pub struct AppState {
     pub window: std::sync::Arc<Window>,
@@ -24,6 +27,7 @@ pub struct AppState {
 
     pub clear_color: wgpu::Color,
 
+    #[cfg(feature = "egui")]
     pub egui_renderer: EguiRenderer,
 
     pub input_state: InputsState,
@@ -49,6 +53,7 @@ pub trait App {
 
     fn update(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
+    #[cfg(feature = "egui")]
     fn render_gui(&mut self, _app_state: &mut AppState) -> Result<()> { Ok(()) }
 
     fn render(&mut self, _app_state: &mut AppState, _output_view: &wgpu::TextureView) -> Result<()> { Ok(()) }
@@ -133,7 +138,6 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
 
     let window_dimensions = window.inner_size();
 
-
     let mut render_instance = RenderInstance::new(Some(rendering_config.backend), None);
     let mut surface_handle = pollster::block_on(render_instance.create_render_surface(
         window.clone(),
@@ -147,6 +151,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     
     surface_handle.set_present_mode(&surface_device_handle.device, rendering_config.window_surface_present_mode);
 
+    #[cfg(feature = "egui")]
     let egui_renderer = EguiRenderer::new(&surface_device_handle.device, surface_handle.format(), None, 1, &window);
 
     let mut app_state = AppState {
@@ -157,6 +162,7 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
 
         clear_color: wgpu::Color { r: 0.1, g: 0.2, b: 0.3, a: 1.0 },
 
+        #[cfg(feature = "egui")]
         egui_renderer,
 
         input_state: InputsState::default(),
@@ -195,6 +201,7 @@ fn run_loop<T: 'static>(app: &mut impl App, app_state: &mut AppState, event: Eve
     app_state.input_state.handle_event(&event);
     app_state.system_state.handle_event(&event);
 
+    #[cfg(feature = "egui")]
     if let Event::WindowEvent { event: window_event, .. } = &event {
         let _ = app_state.egui_renderer.handle_window_event(&app_state.window, window_event);
     }
@@ -283,39 +290,40 @@ pub fn render_app(app: &mut impl App, app_state: &mut AppState, output: wgpu::Su
     app.render(app_state, &view)?;
 
     // draw UI
-    app_state.egui_renderer.begin_frame(&app_state.window);
-    app.render_gui(app_state)?;
-    let egui_output = app_state.egui_renderer.end_frame();
+    #[cfg(feature = "egui")]
+    {
+        app_state.egui_renderer.begin_frame(&app_state.window);
+        app.render_gui(app_state)?;
+        let egui_output = app_state.egui_renderer.end_frame();
 
-    // let window_dimensions = app_state.window.inner_size();
+        let output_size = output.texture.size();
 
-    let output_size = output.texture.size();
+        let screen_descriptor = egui_wgpu::ScreenDescriptor {
+            size_in_pixels: [output_size.width, output_size.height],
+            pixels_per_point: app_state.window.scale_factor() as f32,
+        };
 
-    let screen_descriptor = ScreenDescriptor {
-        size_in_pixels: [output_size.width, output_size.height],
-        pixels_per_point: app_state.window.scale_factor() as f32,
-    };
+        let DeviceHandle { device: surface_device, queue: surface_queue, .. } = app_state.render_instance.device_from_surface_handle(&app_state.surface_handle);
 
-    let DeviceHandle { device: surface_device, queue: surface_queue, .. } = app_state.render_instance.device_from_surface_handle(&app_state.surface_handle);
-
-    let mut egui_encoder = surface_device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
-    app_state.egui_renderer.draw_output(
-        egui_output,
-        surface_device,
-        surface_queue,
-        &mut egui_encoder,
-        &app_state.window,
-        &view,
-        screen_descriptor,
-    );
-    surface_queue.submit(Some(egui_encoder.finish()));
+        let mut egui_encoder = surface_device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render UI Encoder") });
+        app_state.egui_renderer.draw_output(
+            egui_output,
+            surface_device,
+            surface_queue,
+            &mut egui_encoder,
+            &app_state.window,
+            &view,
+            screen_descriptor,
+        );
+        surface_queue.submit(Some(egui_encoder.finish()));
+    }
 
     output.present();
 
     Ok(())
 }
 
+#[cfg(feature = "egui")]
 // Update the viewport of the render pass to match the available rect of the gui
 pub fn fit_viewport_to_gui_available_rect(render_pass: &mut wgpu::RenderPass, _app_state: &AppState) {
     let window_scale_factor = _app_state.window.scale_factor() as f32;
