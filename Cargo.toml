@@ -1,6 +1,6 @@
 [package]
 name = "oxyde"
-version = "0.0.2"
+version = "0.1.0"
 authors = ["DE SMET Enguerrand"]
 edition = "2021"
 
