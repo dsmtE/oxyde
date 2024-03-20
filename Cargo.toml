@@ -29,7 +29,7 @@ egui-winit = { version = "0.26.2", optional = true }
 
 spin_sleep = { version = "1.2", optional = true }
 
-image = { version = "0.24", optional = true }
+image = { version = "0.25", optional = true }
 shaderc = { version = "0.8", optional = true }
 
 glam = { version = "0.26", optional = true }
