@@ -1,4 +1,3 @@
-use nalgebra_glm as glm;
 use std::time::Instant;
 use winit::{
     dpi::PhysicalSize,
@@ -58,9 +57,9 @@ pub struct MouseState {
     pub is_left_clicked: bool,
     pub is_right_clicked: bool,
     pub is_middle_clicked: bool,
-    pub position: glm::Vec2,
-    pub position_delta: glm::Vec2,
-    pub wheel_delta: glm::Vec2,
+    pub position: glam::Vec2,
+    pub position_delta: glam::Vec2,
+    pub wheel_delta: glam::Vec2,
     pub moved: bool,
     pub scrolled: bool,
 }
@@ -70,12 +69,12 @@ impl WinitEventHandler for MouseState {
         match event {
             Event::NewEvents { .. } => {
                 if !self.scrolled {
-                    self.wheel_delta = glm::vec2(0.0, 0.0);
+                    self.wheel_delta = glam::vec2(0.0, 0.0);
                 }
                 self.scrolled = false;
 
                 if !self.moved {
-                    self.position_delta = glm::vec2(0.0, 0.0);
+                    self.position_delta = glam::vec2(0.0, 0.0);
                 }
                 self.moved = false;
             },
@@ -91,7 +90,7 @@ impl WinitEventHandler for MouseState {
                 },
                 WindowEvent::CursorMoved { position, .. } => {
                     let last_position = self.position;
-                    let current_position = glm::vec2(position.x as _, position.y as _);
+                    let current_position = glam::vec2(position.x as _, position.y as _);
                     self.position = current_position;
                     self.position_delta = current_position - last_position;
                     self.moved = true;
@@ -100,7 +99,7 @@ impl WinitEventHandler for MouseState {
                     delta: MouseScrollDelta::LineDelta(h_lines, v_lines),
                     ..
                 } => {
-                    self.wheel_delta = glm::vec2(h_lines, v_lines);
+                    self.wheel_delta = glam::vec2(h_lines, v_lines);
                     self.scrolled = true;
                 },
                 _ => {},
@@ -133,7 +132,7 @@ impl SystemState {
         width as f32 / height as f32
     }
 
-    pub fn window_center(&self) -> glm::Vec2 { glm::vec2(self.window_dimensions.width as f32 / 2.0, self.window_dimensions.height as f32 / 2.0) }
+    pub fn window_center(&self) -> glam::Vec2 { glam::vec2(self.window_dimensions.width as f32 / 2.0, self.window_dimensions.height as f32 / 2.0) }
 }
 
 impl WinitEventHandler for SystemState {
