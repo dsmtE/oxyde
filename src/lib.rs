@@ -1,5 +1,5 @@
 #[cfg(feature = "application")]
-mod app;
+pub mod app;
 #[cfg(feature = "application")]
 pub mod input;
 pub mod wgpu_utils;
