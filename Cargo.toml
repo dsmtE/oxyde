@@ -7,7 +7,7 @@ edition = "2021"
 [features]
 glsl = ["dep:shaderc"]
 icon = ["dep:image"]
-log = ["dep:log", "dep:fern", "dep:chrono"]
+log = ["dep:log"]
 naga = ["dep:naga_oil", "wgpu/naga-ir"]
 
 [dependencies]
@@ -15,8 +15,6 @@ winit = "0.29"
 
 anyhow = "1"
 log = {version = "0.4", optional = true }
-fern = { version = "0.6", features = [ "colored" ], optional = true }
-chrono = { version = "0.4", optional = true }
 
 wgpu = { version = "0.19", features = [ "spirv" ] }
 pollster = "0.3"
