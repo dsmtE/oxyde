@@ -1,7 +1,7 @@
 #[cfg(feature = "application")]
 mod app;
 #[cfg(feature = "application")]
-mod input;
+pub mod input;
 pub mod wgpu_utils;
 
 pub extern crate wgpu;

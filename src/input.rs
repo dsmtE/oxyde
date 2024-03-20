@@ -35,6 +35,7 @@ impl WinitEventHandler for InputsState {
                         event::KeyEvent {
                             physical_key: keyboard::PhysicalKey::Code(keycode),
                             state,
+                            #[cfg(feature = "log")]
                             logical_key,
                             ..
                         },
