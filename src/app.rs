@@ -1,9 +1,8 @@
 use std::sync::Arc;
+use winit::window;
+#[cfg(feature = "egui")]
 use winit::{
-    event::{self, ElementState, Event, MouseButton, WindowEvent},
-    event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
-    keyboard,
-    window::{Window, WindowBuilder},
+    application::ApplicationHandler, event::{self, ElementState, Event, MouseButton, WindowEvent}, event_loop::{ControlFlow, EventLoop}, keyboard, window::{Window, WindowAttributes}
 };
 
 use anyhow::Result;
@@ -68,6 +67,21 @@ pub trait App {
     fn handle_event<T: 'static>(&mut self, _app_state: &mut AppState, _event: &Event<T>) -> Result<()> { Ok(()) }
 }
 
+impl ApplicationHandler for AppState {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        todo!()
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
+        todo!()
+    }
+}
+
 pub struct AppConfig {
     pub is_resizable: bool,
     pub title: &'static str,
@@ -85,6 +99,30 @@ impl Default for AppConfig {
             icon: None,
             control_flow: ControlFlow::Poll,
         }
+    }
+}
+
+impl  AppConfig {
+    pub fn get_window_attributes(&self) -> WindowAttributes {
+        let mut window_attributes = WindowAttributes::default()
+        .with_decorations(true)
+        .with_resizable(self.is_resizable)
+        .with_transparent(false)
+        .with_title(self.title);
+
+        #[cfg(feature = "icon")]
+        if let Some(icon_path) = self.icon {
+            if let Ok(image_reader) = image::ImageReader::open(icon_path) {
+                if let Ok(dynamic_image) = image_reader.decode() {
+                    let image_buffer = dynamic_image.to_rgba8();
+                    let (width, height) = image_buffer.dimensions();
+                    let icon = winit::window::Icon::from_rgba(image_buffer.into_raw(), width, height).ok();
+                    window_attributes.window_icon = icon;
+                }
+            }
+        }
+
+        window_attributes
     }
 }
 
@@ -112,31 +150,7 @@ impl Default for RenderingConfig {
 
 pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config: RenderingConfig) -> Result<()> {
     let event_loop = EventLoop::new()?;
-    event_loop.set_control_flow(ControlFlow::Poll);
-
-    #[allow(unused_mut)]
-    let mut window_builder: WindowBuilder = WindowBuilder::new()
-        .with_decorations(true)
-        .with_resizable(app_config.is_resizable)
-        .with_transparent(false)
-        .with_title(app_config.title);
-
-    #[cfg(feature = "icon")]
-    if let Some(icon_path) = app_config.icon {
-        let image = image::io::Reader::open(icon_path)?.decode()?.into_rgba8();
-        let (width, height) = image.dimensions();
-        let icon = winit::window::Icon::from_rgba(image.into_raw(), width, height)?;
-        window_builder = window_builder.with_window_icon(Some(icon));
-    }
-
-    // if let Some(default_dimension) = config.default_dimension {
-    //     let (width, height) = default_dimension;
-    //     window_builder = window_builder.with_inner_size(PhysicalSize::new(width, height));
-    // }
-
-    let window = Arc::new(window_builder.build(&event_loop)?);
-
-    let window_dimensions = window.inner_size();
+    event_loop.set_control_flow(app_config.control_flow);
 
     let mut render_instance = RenderInstance::new(Some(rendering_config.backend), None);
     let mut surface_handle = pollster::block_on(render_instance.create_render_surface(
@@ -152,13 +166,13 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     surface_handle.set_present_mode(&surface_device_handle.device, rendering_config.window_surface_present_mode);
 
     #[cfg(feature = "egui")]
-    let egui_renderer = EguiRenderer::new(&surface_device_handle.device, surface_handle.format(), None, 1, &window);
+    let egui_renderer = EguiRenderer::new(&surface_device_handle.device, surface_handle.format(), egui_wgpu::RendererOptions::default(), &window);
 
     let mut app_state = AppState {
-        window,
+        window: None,
 
         render_instance,
-        surface_handle,
+        surface_handle: None,
 
         clear_color: wgpu::Color { r: 0.1, g: 0.2, b: 0.3, a: 1.0 },
 
@@ -175,13 +189,13 @@ pub fn run_application<T: App + 'static>(app_config: AppConfig, rendering_config
     };
 
     let (tx, rx) = std::sync::mpsc::channel::<wgpu::Error>();
-    app_state.render_instance.device_from_surface_handle(&app_state.surface_handle).device.on_uncaptured_error(Box::new(move |e: wgpu::Error| {
+    app_state.render_instance.device_from_surface_handle(&app_state.surface_handle).device.on_uncaptured_error(Arc::new(move |e: wgpu::Error| {
         tx.send(e).expect("sending error failed");
     }));
 
     let mut app = T::create(&mut app_state);
 
-    app_state.render_instance.device_from_surface_handle(&app_state.surface_handle).device.on_uncaptured_error(Box::new(|err| panic!("{}", err)));
+    app_state.render_instance.device_from_surface_handle(&app_state.surface_handle).device.on_uncaptured_error(Arc::new(|err| panic!("{}", err)));
 
     if let Ok(err) = rx.try_recv() {
         panic!("{}", err);

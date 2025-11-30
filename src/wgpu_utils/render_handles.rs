@@ -50,8 +50,8 @@ pub struct SurfaceHandle<'s> {
 
 impl RenderInstance {
     pub fn new(backends: Option<wgpu::Backends>, flags: Option<wgpu::InstanceFlags>) -> Self {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: backends.unwrap_or(wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY)),
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            backends: backends.unwrap_or(wgpu::Backends::from_env().unwrap_or(wgpu::Backends::PRIMARY)),
             flags: flags.unwrap_or(wgpu::InstanceFlags::default()),
             ..Default::default()
         });
@@ -82,19 +82,16 @@ impl RenderInstance {
 
     // Create a new device handle and return its index
     async fn new_device(&mut self, compatible_surface: Option<&wgpu::Surface<'_>>, power_preference: Option<wgpu::PowerPreference>) -> Result<usize, RenderHandleError> {
-        let adapter = match wgpu::util::initialize_adapter_from_env(&self.instance, compatible_surface) {
-            // TODO: add condition to check if the adapter is compatible required power preference as well if provided
-            Some(a) => Some(a),
-            None => {
-                self.instance
+        let adapter: wgpu::Adapter = wgpu::util::initialize_adapter_from_env(&self.instance, compatible_surface).unwrap_or(
+            self.instance
                     .request_adapter(&wgpu::RequestAdapterOptions {
-                        power_preference: power_preference.unwrap_or(wgpu::util::power_preference_from_env().unwrap_or_default()),
+                        power_preference: power_preference.unwrap_or(wgpu::PowerPreference::from_env().unwrap_or_default()),
                         force_fallback_adapter: false,
                         compatible_surface,
                     })
                     .await
-            }
-        }.ok_or(RenderHandleError::AdapterRequestError)?;
+                    .map_err(|_| RenderHandleError::AdapterRequestError)?
+        );
 
         let features = adapter.features();
         let limits = wgpu::Limits::default();
@@ -110,8 +107,8 @@ impl RenderInstance {
                     label: None,
                     required_features: features & maybe_features,
                     required_limits: limits,
+                    ..Default::default()
                 },
-                None,
             )
             .await
             .map_err(|e| RenderHandleError::NoCompatibleDevice(e))?;

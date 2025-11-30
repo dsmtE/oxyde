@@ -1,5 +1,5 @@
 use egui::Context;
-use egui_wgpu::{Renderer, ScreenDescriptor};
+use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use egui_winit::{EventResponse, State};
 use wgpu::{CommandEncoder, Device, Queue, TextureFormat, TextureView};
 use winit::{event::WindowEvent, window::Window};
@@ -13,14 +13,13 @@ impl EguiRenderer {
     pub fn new(
         device: &Device,
         output_color_format: TextureFormat,
-        output_depth_format: Option<TextureFormat>,
-        msaa_samples: u32,
+        rendered_options: RendererOptions,
         window: &Window,
     ) -> EguiRenderer {
         let egui_context = Context::default();
         let viewport_id = egui_context.viewport_id();
-        let egui_state = egui_winit::State::new(egui_context, viewport_id, &window, Some(window.scale_factor() as f32), None);
-        let egui_renderer = Renderer::new(device, output_color_format, output_depth_format, msaa_samples);
+        let egui_state = egui_winit::State::new(egui_context, viewport_id, &window, Some(window.scale_factor() as f32), None, None);
+        let egui_renderer = Renderer::new(device, output_color_format, rendered_options);
 
         EguiRenderer {
             state: egui_state,
@@ -41,7 +40,7 @@ impl EguiRenderer {
         window: &Window,
         window_surface_view: &TextureView,
         screen_descriptor: ScreenDescriptor,
-        run_ui: impl FnOnce(&Context),
+        mut run_ui: impl FnMut(&Context),
     ) {
         let raw_input = self.state.take_egui_input(window);
         let full_output = self.context().run(raw_input, |ui| {
@@ -53,10 +52,10 @@ impl EguiRenderer {
 
     pub fn begin_frame(&mut self, window: &Window) {
         let raw_input = self.state.take_egui_input(window);
-        self.context().begin_frame(raw_input);
+        self.context().begin_pass(raw_input);
     }
 
-    pub fn end_frame(&mut self) -> egui::FullOutput { self.context().end_frame() }
+    pub fn end_frame(&mut self) -> egui::FullOutput { self.context().end_pass() }
 
     #[allow(clippy::too_many_arguments)]
     pub fn draw_output(
@@ -77,7 +76,7 @@ impl EguiRenderer {
         }
         self.renderer.update_buffers(device, queue, encoder, &tris, &screen_descriptor);
         {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("egui main render pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: window_surface_view,
@@ -86,10 +85,11 @@ impl EguiRenderer {
                         load: wgpu::LoadOp::Load,
                         store: wgpu::StoreOp::Store,
                     },
+                    depth_slice: None,
                 })],
                 ..Default::default()
             });
-            self.renderer.render(&mut render_pass, &tris, &screen_descriptor);
+            self.renderer.render(&mut render_pass.forget_lifetime(), &tris, &screen_descriptor);
         }
         for x in &full_output.textures_delta.free {
             self.renderer.free_texture(x)
