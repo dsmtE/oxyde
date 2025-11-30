@@ -60,7 +60,7 @@ impl<Content: bytemuck::Pod> UniformBuffer<Content> {
 
     pub fn force_update_content(&self, queue: &wgpu::Queue, content: Content) { queue.write_buffer(&self.buffer, 0, bytemuck::bytes_of(&content)); }
 
-    pub fn binding_resource(&self) -> wgpu::BindingResource { self.buffer.as_entire_binding() }
+    pub fn binding_resource(&self) -> wgpu::BindingResource<'_> { self.buffer.as_entire_binding() }
 }
 
 pub struct UniformBufferWrapper<Content> {
